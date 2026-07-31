@@ -1533,41 +1533,39 @@ class ProxyFarmApp(ctk.CTk):
         self.clean_btn.pack(pady=20, padx=10, fill="x")
         self.bind_tooltip(self.clean_btn, "Detiene todo, corta el internet y borra el caché de apps en TODOS los celulares.")
 
-        # Instaladores masivos (Movidos desde Extras)
+        # Instaladores masivos (Movidos desde Extras) - Diseño vertical scrollable
         inst_frame = ctk.CTkFrame(frame, fg_color="#1E293B", corner_radius=8)
         inst_frame.pack(fill="x", padx=10, pady=(10, 20))
-        ctk.CTkLabel(inst_frame, text="📦 Instaladores Masivos de APKs", font=("Arial", 14, "bold"), text_color="#F59E0B").pack(pady=5)
+        ctk.CTkLabel(inst_frame, text="📦 Gestión de Aplicaciones (APK)", font=("Arial", 14, "bold"), text_color="#F59E0B").pack(pady=5)
         
-        btn_frame = ctk.CTkFrame(inst_frame, fg_color="transparent")
-        btn_frame.pack(pady=5)
+        # Contenedor con scroll para las aplicaciones
+        scroll_apps = ctk.CTkScrollableFrame(inst_frame, height=190, fg_color="transparent")
+        scroll_apps.pack(fill="x", padx=5, pady=5)
         
-        platforms = [
-            ("🎵 AWA", "awa.apk", "#D946EF"),
-            ("📻 Pandora", "pandora.apk", "#0EA5E9"),
-            ("🎧 Audiomack", "audiomack.apk", "#F59E0B"),
-            ("🍎 Apple Music", "applemusic.apk", "#EF4444"),
-            ("🌊 Tidal", "tidal.apk", "#06B6D4")
+        app_list = [
+            ("AWA", "awa.apk", "fm.awa.app", "#D946EF"),
+            ("Pandora", "pandora.apk", "com.pandora.android", "#0EA5E9"),
+            ("Audiomack", "audiomack.apk", "com.audiomack", "#F59E0B"),
+            ("Apple Music", "applemusic.apk", "com.apple.android.music", "#EF4444"),
+            ("Tidal", "tidal.apk", "com.aspiro.tidal", "#06B6D4")
         ]
         
-        for name, apk, color in platforms:
-            ctk.CTkButton(btn_frame, text=name, width=120, fg_color=color, command=lambda a=apk, n=name: self.install_custom_apk(a, n)).pack(side="left", padx=5)
-
-        # Desinstaladores masivos
-        ctk.CTkLabel(inst_frame, text="🗑️ Desinstaladores Masivos", font=("Arial", 12, "bold"), text_color="#EF4444").pack(pady=(10, 2))
-        
-        unbtn_frame = ctk.CTkFrame(inst_frame, fg_color="transparent")
-        unbtn_frame.pack(pady=(0, 10))
-        
-        uninstall_platforms = [
-            ("❌ AWA", "fm.awa.app", "#991B1B"),
-            ("❌ Pandora", "com.pandora.android", "#991B1B"),
-            ("❌ Audiomack", "com.audiomack", "#991B1B"),
-            ("❌ Apple Music", "com.apple.android.music", "#991B1B"),
-            ("❌ Tidal", "com.aspiro.tidal", "#991B1B")
-        ]
-        
-        for name, pkg, color in uninstall_platforms:
-            ctk.CTkButton(unbtn_frame, text=name, width=120, fg_color=color, hover_color="#7F1D1D", command=lambda p=pkg, n=name: self.uninstall_custom_apk(p, n)).pack(side="left", padx=5)
+        for name, apk, pkg, color in app_list:
+            row_frame = ctk.CTkFrame(scroll_apps, fg_color="transparent")
+            row_frame.pack(fill="x", pady=4, padx=5)
+            
+            # Nombre de la App
+            ctk.CTkLabel(row_frame, text=name, font=("Arial", 12, "bold"), width=95, anchor="w").pack(side="left", padx=5)
+            
+            # Botón Instalar
+            btn_install = ctk.CTkButton(row_frame, text="📲 Instalar", fg_color=color, width=95, height=26,
+                                        command=lambda a=apk, n=name: self.install_custom_apk(a, n))
+            btn_install.pack(side="left", padx=5)
+            
+            # Botón Desinstalar
+            btn_uninstall = ctk.CTkButton(row_frame, text="❌ Quitar", fg_color="#991B1B", hover_color="#7F1D1D", width=80, height=26,
+                                          command=lambda p=pkg, n=name: self.uninstall_custom_apk(p, n))
+            btn_uninstall.pack(side="left", padx=5)
 
         # Right Cards
         self._right_container = ctk.CTkFrame(self.tab_ctrl, fg_color="transparent")

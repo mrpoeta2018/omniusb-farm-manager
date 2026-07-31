@@ -1547,7 +1547,8 @@ class ProxyFarmApp(ctk.CTk):
             ("Pandora", "pandora.apk", "com.pandora.android", "#0EA5E9"),
             ("Audiomack", "audiomack.apk", "com.audiomack", "#F59E0B"),
             ("Apple Music", "applemusic.apk", "com.apple.android.music", "#EF4444"),
-            ("Tidal", "tidal.apk", "com.aspiro.tidal", "#06B6D4")
+            ("Tidal", "tidal.apk", "com.aspiro.tidal", "#06B6D4"),
+            ("Amazon Music", "amazonmusic.apk", "com.amazon.mp3", "#FF9900")
         ]
         
         for name, apk, pkg, color in app_list:

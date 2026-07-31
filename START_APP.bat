@@ -24,7 +24,7 @@ if not errorlevel 1 (
         git branch -M main
         git checkout -f main
         echo [OK] Git configurado correctamente.
-        echo.
+        echo(
     )
 )
 
@@ -48,7 +48,7 @@ if exist %MEMORY_FILE% (
 if exist %MEMORY_FILE% del /q %MEMORY_FILE%
 echo %CD%>%MEMORY_FILE%
 
-echo.
+echo(
 echo [1/3] Chequeando Python...
 
 :: -- Buscar Python dinamicamente --
@@ -88,14 +88,14 @@ set "PYTHON=%LOCALAPPDATA%\Programs\Python\Python311\python.exe"
 "%PYTHON%" --version
 echo [+] Python OK
 
-echo.
+echo(
 echo [2/3] Construyendo Entorno...
 if not exist venv (
     "%PYTHON%" -m venv venv
 )
 call venv\Scripts\activate.bat
 
-echo.
+echo(
 echo [3/3] Chequeando Dependencias...
 
 if exist "node_portable" (
@@ -105,13 +105,13 @@ if exist "node_portable" (
 pip install -r requirements.txt
 python auto_repair.py
 
-echo.
-echo.
+echo(
+echo(
 echo [+] Abriendo OmniUSB...
 
 :loop
 python app.py
-echo.
+echo(
 echo [!] El programa se ha cerrado o actualizado. Reiniciando en 2 segundos...
 timeout /t 2 >nul
 goto loop

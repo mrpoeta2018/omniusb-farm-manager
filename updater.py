@@ -26,7 +26,11 @@ def get_remote_version(check_url):
     if not check_url:
         return None
     try:
-        req = urllib.request.Request(check_url, headers={"User-Agent": "OmniUSB/4.0"})
+        import time
+        sep = "&" if "?" in check_url else "?"
+        url_with_t = f"{check_url}{sep}t={int(time.time())}"
+        
+        req = urllib.request.Request(url_with_t, headers={"User-Agent": "OmniUSB/4.0"})
         with urllib.request.urlopen(req, timeout=8) as resp:
             return json.loads(resp.read().decode("utf-8"))
     except Exception:

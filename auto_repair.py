@@ -50,8 +50,8 @@ def verify_system_integrity():
     # 1. Check Gnirehtet
     if not os.path.exists("gnirehtet.exe") or not os.path.exists("gnirehtet.apk"):
         print("[!] Gnirehtet faltante. Iniciando Auto-Reparación...")
-        gnirehtet_url = "https://github.com/Genymobile/gnirehtet/releases/download/v2.5.3/gnirehtet-rust-win64-v2.5.3.zip"
-        # Since v2.5.3 contains a folder `gnirehtet-rust-win64-2.5.3`, we use flatten=True
+        gnirehtet_url = "https://github.com/Genymobile/gnirehtet/releases/download/v2.5.1/gnirehtet-rust-win64-v2.5.1.zip"
+        # Since v2.5.1 contains a folder `gnirehtet-rust-win64-2.5.1`, we use flatten=True
         try:
             download_and_extract(gnirehtet_url, "gnirehtet_dl.zip", flatten=True)
         except Exception as e:

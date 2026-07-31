@@ -742,7 +742,7 @@ class ProxyFarmApp(ctk.CTk):
             self._right_container.grid(row=1, column=1, pady=10, padx=10, sticky="nsew")
             self.log_frame.grid(row=2, column=0, columnspan=2, pady=10, padx=10, sticky="ew")
             self.proxy_textbox.configure(height=120)
-            self.tab_ctrl.grid_columnconfigure(1, weight=2)
+            self.tab_ctrl.grid_columnconfigure(1, weight=1)
         else:
             # Modo bolsillo: solo columna de controles, sin log ni tarjetas
             self.is_compact = True
@@ -1466,7 +1466,7 @@ class ProxyFarmApp(ctk.CTk):
 
     def build_control_tab(self):
         self.tab_ctrl.grid_columnconfigure(0, weight=1)
-        self.tab_ctrl.grid_columnconfigure(1, weight=2)
+        self.tab_ctrl.grid_columnconfigure(1, weight=1)
         self.tab_ctrl.grid_rowconfigure(1, weight=1)
 
         # left controls
@@ -1983,7 +1983,7 @@ class ProxyFarmApp(ctk.CTk):
 
     def create_device_card(self, dev):
         card = ctk.CTkFrame(self.dev_frame, fg_color="#1E1E1E", corner_radius=10, border_width=1, border_color="#333333")
-        card.pack(fill="x", pady=8, padx=5)
+        card.pack(fill="x", pady=4, padx=4)
         conn_type = "📶 WiFi" if dev['is_wifi'] else "🔌 USB"
         
         # Checkbox for device selection
@@ -1995,19 +1995,20 @@ class ProxyFarmApp(ctk.CTk):
             cb.pack()
         
         left_fr = ctk.CTkFrame(card, fg_color="transparent")
-        left_fr.pack(side="left", padx=5, pady=10, fill="y")
+        left_fr.pack(side="left", padx=5, pady=4, fill="y")
         model_name = dev.get('model', 'Phone')
-        title = ctk.CTkLabel(left_fr, text=f"{model_name}", font=("Arial", 16, "bold"))
+        title = ctk.CTkLabel(left_fr, text=f"{model_name}", font=("Arial", 14, "bold"))
         title.pack(anchor="w")
         # Driver status on left
         pkg_ok = dev.get('pkg_ok', False)
         status_color = "#10B981" if pkg_ok else "#EF4444"
         status_txt = "✅ Driver OK" if pkg_ok else "❌ Sin Driver"
-        ctk.CTkLabel(left_fr, text=status_txt, text_color=status_color, font=("Arial", 11, "bold")).pack(anchor="w")
-        ctk.CTkLabel(left_fr, text=f"{conn_type}", text_color="gray").pack(anchor="w")
+        ctk.CTkLabel(left_fr, text=status_txt, text_color=status_color, font=("Arial", 10, "bold")).pack(anchor="w")
+        ctk.CTkLabel(left_fr, text=f"{conn_type}", text_color="gray", font=("Arial", 10)).pack(anchor="w")
+        ctk.CTkLabel(left_fr, text=f"ID: {dev['serial']}", text_color="#94A3B8", font=("Arial", 9)).pack(anchor="w")
         
         mid_fr = ctk.CTkFrame(card, fg_color="transparent")
-        mid_fr.pack(side="left", padx=20, pady=10, fill="y", expand=True)
+        mid_fr.pack(side="left", padx=10, pady=4, fill="y", expand=True)
         # Timer
         timer_lbl = ctk.CTkLabel(mid_fr, text="⏳ Esperando...", font=("Arial", 11), text_color="#94A3B8")
         timer_lbl.pack(anchor="w")
@@ -2018,7 +2019,7 @@ class ProxyFarmApp(ctk.CTk):
         
         # Traffic on right
         right_info = ctk.CTkFrame(card, fg_color="transparent")
-        right_info.pack(side="right", padx=15)
+        right_info.pack(side="right", padx=8)
         traffic_lbl = ctk.CTkLabel(right_info, text="MB: 0.0↓ 0.0↑", font=("Courier New", 12))
         traffic_lbl.pack()
         # Health status indicator

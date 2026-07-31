@@ -626,6 +626,8 @@ class ProxyFarmApp(ctk.CTk):
         self.compact_btn.pack(side="left", padx=10)
         self.status_lbl = ctk.CTkLabel(self.header_frame, text="Estado: ESPERANDO... 🌙", text_color="yellow")
         self.status_lbl.pack(side="right", padx=10)
+        self.update_status_lbl = ctk.CTkLabel(self.header_frame, text="🔍 Buscando actualizaciones...", text_color="#9CA3AF")
+        self.update_status_lbl.pack(side="right", padx=15)
         
         self.tabview = ctk.CTkTabview(self, width=1150, height=800)
         self.tabview.pack(padx=20, pady=10, fill="both", expand=True)
@@ -754,9 +756,29 @@ class ProxyFarmApp(ctk.CTk):
 
     def _check_updates(self):
         """Check for updates in background on startup."""
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        git_dir = os.path.join(base_dir, ".git")
+        
+        # Verificar si Git está disponible en la PC y configurado
+        git_available = False
+        try:
+            import subprocess
+            subprocess.run(["git", "--version"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+            git_available = True
+        except:
+            pass
+            
+        if not os.path.exists(git_dir) or not git_available:
+            self.update_status_lbl.configure(text="⚠️ Sin Git (Actualización desactivada)", text_color="#F59E0B")
+            return
+            
         def _on_result(has_update, remote_info):
             if has_update and remote_info:
+                self.after(0, lambda: self.update_status_lbl.configure(text="🚀 Nueva actualización!", text_color="#10B981"))
                 self.after(0, self._show_update_bar, remote_info)
+            else:
+                self.after(0, lambda: self.update_status_lbl.configure(text="✅ App al día", text_color="#3B82F6"))
+                
         check_for_updates_async(_on_result)
 
     def _show_update_bar(self, remote_info):

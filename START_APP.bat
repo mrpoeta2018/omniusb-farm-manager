@@ -12,15 +12,20 @@ echo Iniciando Sistema... Por favor, Espera.
 echo =======================================
 
 :: AUTO-CONFIGURAR GIT SI ES UNA PC NUEVA O ZIP DESCARGADO
-if not exist ".git" (
-    echo [!] Inicializando Git para permitir actualizaciones online...
-    git init
-    git remote add origin https://github.com/mrpoeta2018/omniusb-farm-manager.git
-    git fetch origin
-    git branch -M main
-    git checkout -f main
-    echo [OK] Git configurado correctamente.
-    echo.
+where git >nul 2>&1
+if not errorlevel 1 (
+    git remote get-url origin >nul 2>&1
+    if errorlevel 1 (
+        echo [!] Inicializando Git para permitir actualizaciones online...
+        if exist ".git" rmdir /s /q ".git"
+        git init
+        git remote add origin https://github.com/mrpoeta2018/omniusb-farm-manager.git
+        git fetch origin
+        git branch -M main
+        git checkout -f main
+        echo [OK] Git configurado correctamente.
+        echo.
+    )
 )
 
 set MEMORY_FILE=install_path.txt

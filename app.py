@@ -2880,6 +2880,82 @@ class ProxyFarmApp(ctk.CTk):
         self.btn_login_acc.configure(state="disabled", text="⏳ Iniciando sesión...")
         threading.Thread(target=self._spotify_login_thread, args=(serial,), daemon=True).start()
 
+
+    def start_spotify_app_signup(self):
+        serial = self.account_device_combo.get()
+        if not serial or serial == "No hay celulares":
+            self.acc_log("Selecciona un celular primero", "warn")
+            return
+            
+        self.btn_signup_acc.configure(state="disabled", text="⏳ Iniciando Registro...")
+        import threading
+        threading.Thread(target=self._spotify_app_signup_thread, args=(serial,), daemon=True).start()
+
+    def _spotify_app_signup_thread(self, serial):
+        import random
+        import time
+        try:
+            prefix = self.acc_email_prefix_entry.get().strip()
+            domain = self.acc_email_domain_entry.get().strip()
+            pwd = self.acc_password_entry.get().strip()
+            rnd_num = random.randint(100000, 999999)
+            email = f"{prefix}{rnd_num}@{domain}"
+            
+            self.acc_log(f"🚀 Iniciando Registro App en {serial} (A Ciegas)", "success")
+            self.acc_log(f"Correo Nuevo: {email}")
+            self.acc_log(f"Clave: {pwd}")
+            
+            self.acc_log("Forzando orientación vertical...")
+            self.adb.run_command(["shell", "settings", "put", "system", "accelerometer_rotation", "0"], serial)
+            self.adb.run_command(["shell", "settings", "put", "system", "user_rotation", "0"], serial)
+            time.sleep(1.0)
+            
+            self.acc_log("Abriendo app de Spotify...")
+            self.adb.run_command(["shell", "am", "start", "-n", "com.spotify.music/com.spotify.music.MainActivity"], serial)
+            self.acc_log("Esperando 6s a que cargue la app...")
+            time.sleep(6.0)
+            
+            self.acc_log("Buscando botón 'Registrarte gratis'...")
+            click_ok = self.find_and_click_by_text(serial, ["Registrarte gratis", "Sign up free", "Registrarse", "Sign up"])
+            if not click_ok:
+                self.acc_log("Pulsando coordenadas de 'Registrarte gratis'...", "warn")
+                self.adb.run_command(["shell", "input", "tap", "540", "1600"], serial)
+            time.sleep(4.0)
+            
+            self.acc_log("Ingresando correo...")
+            self.adb.run_command(["shell", "input", "tap", "540", "500"], serial)
+            time.sleep(0.5)
+            self.adb.run_command(["shell", "input", "text", email], serial)
+            time.sleep(1.5)
+            
+            self.acc_log("Avanzando (Siguiente)...")
+            self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # Enter
+            time.sleep(1.0)
+            self.adb.run_command(["shell", "input", "tap", "540", "1100"], serial) # Clic respaldo boton Siguiente abajo
+            time.sleep(3.0)
+            
+            self.acc_log("Ingresando contraseña...")
+            self.adb.run_command(["shell", "input", "tap", "540", "500"], serial)
+            time.sleep(0.5)
+            self.adb.run_command(["shell", "input", "text", pwd], serial)
+            time.sleep(1.5)
+            
+            self.acc_log("Avanzando (Siguiente)...")
+            self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # Enter
+            time.sleep(1.0)
+            self.adb.run_command(["shell", "input", "tap", "540", "1100"], serial) # Clic respaldo boton Siguiente abajo
+            time.sleep(3.0)
+            
+            self.acc_log("✅ Proceso automático finalizado.")
+            self.acc_log("👀 Abriendo pantalla. ¡Selecciona Fecha, Género y Nombre para terminar!", "success")
+            
+            self.after(0, lambda: self.launch_scrcpy(serial))
+            
+        except Exception as e:
+            self.acc_log(f"Falla en el registro App: {str(e)}", "error")
+            
+        self.after(0, lambda: self.btn_signup_acc.configure(state="normal", text="✨ 3. Crear Cuenta en App (A Ciegas)"))
+
     def _spotify_login_thread(self, serial):
         try:
             email_input = self.acc_email_prefix_entry.get().strip()

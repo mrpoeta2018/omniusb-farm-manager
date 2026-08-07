@@ -2718,6 +2718,9 @@ class ProxyFarmApp(ctk.CTk):
         
         self.btn_login_acc = ctk.CTkButton(left_frame, text="🚀 2. Iniciar Sesión App (Auto A Ciegas)", fg_color="#6366F1", hover_color="#4F46E5", command=self.start_spotify_login, height=35)
         self.btn_login_acc.pack(pady=5, fill="x", padx=30)
+        self.btn_signup_acc = ctk.CTkButton(left_frame, text="✨ 3. Crear Cuenta en App (A Ciegas)", fg_color="#D946EF", hover_color="#C026D3", command=self.start_spotify_app_signup, height=35)
+        self.btn_signup_acc.pack(pady=5, fill="x", padx=30)
+
         
         # Redundancias por si falla uiautomator
         manual_frame = ctk.CTkFrame(left_frame, fg_color="transparent")

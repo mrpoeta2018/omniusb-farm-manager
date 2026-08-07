@@ -2678,19 +2678,33 @@ class ProxyFarmApp(ctk.CTk):
 
         ctk.CTkLabel(left_frame, text="👤 Creador de Cuentas Automático", font=("Arial", 16, "bold"), text_color="#F59E0B").pack(pady=10)
 
-        # Selector de Celular
-        ctk.CTkLabel(left_frame, text="📱 Seleccionar Celular:", font=("Arial", 12)).pack(pady=(10, 2))
-        self.account_device_combo = ctk.CTkComboBox(left_frame, values=["No hay celulares"], width=250)
-        self.account_device_combo.pack(pady=5)
+        # Selector Múltiple de Celulares
+        ctk.CTkLabel(left_frame, text="📱 Seleccionar Celular(es):", font=("Arial", 12)).pack(pady=(10, 2))
+        
+        self.acc_devices_frame = ctk.CTkScrollableFrame(left_frame, width=250, height=120)
+        self.acc_devices_frame.pack(pady=5, fill="x", padx=30)
+        self.acc_device_vars = {} # serial -> ctk.BooleanVar
+        
+        btn_frame = ctk.CTkFrame(left_frame, fg_color="transparent")
+        btn_frame.pack(fill="x", padx=30, pady=2)
+        
+        def _sel_all():
+            for var in self.acc_device_vars.values(): var.set(True)
+        def _sel_none():
+            for var in self.acc_device_vars.values(): var.set(False)
+            
+        ctk.CTkButton(btn_frame, text="Todos", width=120, command=_sel_all).pack(side="left")
+        ctk.CTkButton(btn_frame, text="Ninguno", width=120, command=_sel_none).pack(side="right")
 
         def _open_scrcpy_accounts():
-            serial = self.account_device_combo.get()
-            if serial and serial != "No hay celulares":
+            selected = [s for s, v in self.acc_device_vars.items() if v.get()]
+            if not selected:
+                messagebox.showwarning("Aviso", "Selecciona al menos un celular.")
+                return
+            for serial in selected:
                 self.launch_scrcpy(serial)
-            else:
-                messagebox.showwarning("Aviso", "Selecciona un celular válido.")
 
-        ctk.CTkButton(left_frame, text="👀 Ver Pantalla (Scrcpy)", width=250, fg_color="#10B981", text_color="white", command=_open_scrcpy_accounts).pack(pady=5)
+        ctk.CTkButton(left_frame, text="👀 Ver Pantallas (Scrcpy)", width=250, fg_color="#10B981", text_color="white", command=_open_scrcpy_accounts).pack(pady=5)
 
 
         # Prefijo del correo
@@ -2739,16 +2753,28 @@ class ProxyFarmApp(ctk.CTk):
         self.update_account_creator_devices()
 
     def update_account_creator_devices(self):
-        if not hasattr(self, 'account_device_combo'): return
+        if not hasattr(self, 'acc_devices_frame'): return
         devices = getattr(self, 'scanned_devices', [])
         serials = [dev['serial'] for dev in devices]
-        if serials:
-            self.account_device_combo.configure(values=serials)
-            if self.account_device_combo.get() not in serials:
-                self.account_device_combo.set(serials[0])
-        else:
-            self.account_device_combo.configure(values=["No hay celulares"])
-            self.account_device_combo.set("No hay celulares")
+        
+        # Guardar selecciones actuales
+        old_selections = {s: v.get() for s, v in self.acc_device_vars.items()}
+        
+        # Limpiar
+        for widget in self.acc_devices_frame.winfo_children():
+            widget.destroy()
+        self.acc_device_vars.clear()
+        
+        if not serials:
+            ctk.CTkLabel(self.acc_devices_frame, text="No hay celulares detectados").pack(pady=5)
+            return
+            
+        for serial in serials:
+            was_selected = old_selections.get(serial, True)
+            var = ctk.BooleanVar(value=was_selected)
+            self.acc_device_vars[serial] = var
+            cb = ctk.CTkCheckBox(self.acc_devices_frame, text=serial, variable=var)
+            cb.pack(pady=2, anchor="w", padx=10)
 
     def acc_log(self, text, level="info"):
         prefix = "ℹ️"
@@ -2829,9 +2855,9 @@ class ProxyFarmApp(ctk.CTk):
         return False
 
     def start_spotify_account_creation(self):
-        serial = self.account_device_combo.get()
-        if not serial or serial == "No hay celulares":
-            self.acc_log("Selecciona un celular primero", "warn")
+        selected = [s for s, v in self.acc_device_vars.items() if v.get()]
+        if not selected:
+            self.acc_log("Selecciona al menos un celular", "warn")
             return
             
         self.btn_start_acc.configure(state="disabled", text="⏳ Registrando...")
@@ -2872,9 +2898,9 @@ class ProxyFarmApp(ctk.CTk):
         self.after(0, lambda: self.btn_start_acc.configure(state="normal", text="🌐 1. Abrir Registro Chrome (Visible)"))
 
     def start_spotify_login(self):
-        serial = self.account_device_combo.get()
-        if not serial or serial == "No hay celulares":
-            self.acc_log("Selecciona un celular primero", "warn")
+        selected = [s for s, v in self.acc_device_vars.items() if v.get()]
+        if not selected:
+            self.acc_log("Selecciona al menos un celular", "warn")
             return
             
         self.btn_login_acc.configure(state="disabled", text="⏳ Iniciando sesión...")
@@ -2882,24 +2908,29 @@ class ProxyFarmApp(ctk.CTk):
 
 
     def start_spotify_app_signup(self):
-        serial = self.account_device_combo.get()
-        if not serial or serial == "No hay celulares":
-            self.acc_log("Selecciona un celular primero", "warn")
+        selected = [s for s, v in self.acc_device_vars.items() if v.get()]
+        if not selected:
+            self.acc_log("Selecciona al menos un celular", "warn")
             return
             
-        self.btn_signup_acc.configure(state="disabled", text="⏳ Iniciando Registro...")
+        self.btn_signup_acc.configure(state="disabled", text="⏳ Iniciando Registros...")
         import threading
-        threading.Thread(target=self._spotify_app_signup_thread, args=(serial,), daemon=True).start()
-
-    def _spotify_app_signup_thread(self, serial):
         import random
         import time
-        try:
-            prefix = self.acc_email_prefix_entry.get().strip()
-            domain = self.acc_email_domain_entry.get().strip()
-            pwd = self.acc_password_entry.get().strip()
-            rnd_num = random.randint(100000, 999999)
+        
+        prefix = self.acc_email_prefix_entry.get().strip()
+        domain = self.acc_email_domain_entry.get().strip()
+        pwd = self.acc_password_entry.get().strip()
+        
+        for serial in selected:
+            rnd_num = random.randint(10000, 99999)
             email = f"{prefix}{rnd_num}@{domain}"
+            threading.Thread(target=self._spotify_app_signup_thread, args=(serial, email, pwd), daemon=True).start()
+            time.sleep(2) # Retraso para no saturar ADB
+
+    def _spotify_app_signup_thread(self, serial, email, pwd):
+        import time
+        try:
             
             self.acc_log(f"🚀 Iniciando Registro App en {serial} (A Ciegas)", "success")
             self.acc_log(f"Correo Nuevo: {email}")
@@ -2938,60 +2969,11 @@ class ProxyFarmApp(ctk.CTk):
                 self.adb.run_command(["shell", "input", "tap", "540", "850"], serial)
             time.sleep(3.0)
             
-            self.acc_log("Ingresando contraseña...")
-            self.adb.run_command(["shell", "input", "tap", "540", "500"], serial)
-            time.sleep(0.5)
-            self.adb.run_command(["shell", "input", "text", pwd], serial)
-            time.sleep(1.5)
-            
-            self.acc_log("Avanzando (Siguiente)...")
-            self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # Enter
-            time.sleep(1.0)
-            # Búsqueda exacta del botón Siguiente
-            click_ok = self.find_and_click_by_text(serial, ["Siguiente", "Next"])
-            if not click_ok:
-                self.acc_log("No se vio Siguiente, toque ciego de respaldo...")
-                self.adb.run_command(["shell", "input", "tap", "540", "850"], serial)
-            time.sleep(3.0)
-            
-            self.acc_log("Ajustando Fecha de Nacimiento (Rueda)...")
-            # Swipe lento y largo para asegurar que la rueda gire en cualquier resolución
-            for _ in range(2):
-                # 1500ms duration simulates a click-hold and drag
-                self.adb.run_command(["shell", "input", "swipe", "650", "450", "650", "900", "1500"], serial)
-                time.sleep(0.5)
-                self.adb.run_command(["shell", "input", "swipe", "750", "450", "750", "900", "1500"], serial)
-                time.sleep(0.5)
-            time.sleep(1.0)
-            
-            self.acc_log("Avanzando (Siguiente)...")
-            click_ok = self.find_and_click_by_text(serial, ["Siguiente", "Next"])
-            if not click_ok:
-                self.adb.run_command(["shell", "input", "tap", "540", "1000"], serial)
-            time.sleep(3.0)
-            
-            # Revisar si salió el popup de confirmación de edad
-            self.acc_log("Revisando si apareció popup de edad...")
-            popup_ok = self.find_and_click_by_text(serial, ["cambiar la fecha", "No, cambiar"])
-            if popup_ok:
-                self.acc_log("Apareció el popup. Girando la rueda mucho más...", "warn")
-                time.sleep(1.0)
-                for _ in range(3):
-                    self.adb.run_command(["shell", "input", "swipe", "650", "450", "650", "1000", "1500"], serial)
-                    time.sleep(0.5)
-                    self.adb.run_command(["shell", "input", "swipe", "750", "450", "750", "1000", "1500"], serial)
-                    time.sleep(0.5)
-                self.find_and_click_by_text(serial, ["Siguiente", "Next"])
-                time.sleep(3.0)
-            
-            self.acc_log("Seleccionando Género (Masculino)...")
-            self.adb.run_command(["shell", "input", "tap", "750", "450"], serial) # Masculino
-            time.sleep(2.0)
-            
             self.acc_log("✅ Proceso automático finalizado.")
-            self.acc_log("👀 Abriendo pantalla. ¡Dale a 'Crear Cuenta' para terminar!", "success")
+            self.acc_log("👀 Listo en pantalla de Fecha. ¡Termina manual!", "success")
             
-            # self.after(0, lambda: self.launch_scrcpy(serial)) # Desactivado para no abrir duplicados
+            # Scrcpy desactivado a petición del usuario para no saturar la PC al lanzar múltiples
+            
             
         except Exception as e:
             self.acc_log(f"Falla en el registro App: {str(e)}", "error")

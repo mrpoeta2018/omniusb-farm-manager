@@ -79,9 +79,8 @@ def download_update(download_url, callback_progress=None, callback_done=None):
                 time.sleep(2)
                 os._exit(0) # Forzar salida para que START_APP.bat reinicie la app
             except Exception as e:
-                if callback_done:
-                    callback_done(False, f"Error Git: {str(e)}")
-            return
+                print(f"Git pull failed, falling back to ZIP: {e}")
+                pass # Continue to ZIP download below
 
         zip_path = os.path.join(BASE_DIR, "_update.zip")
         extract_path = os.path.join(BASE_DIR, "_update_temp")

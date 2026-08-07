@@ -2931,7 +2931,8 @@ class ProxyFarmApp(ctk.CTk):
             self.acc_log("Avanzando (Siguiente)...")
             self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # Enter
             time.sleep(1.0)
-            self.adb.run_command(["shell", "input", "tap", "540", "1100"], serial) # Clic respaldo boton Siguiente abajo
+            # El boton blanco de siguiente esta mas arriba, en Y=850 aprox.
+            self.adb.run_command(["shell", "input", "tap", "540", "850"], serial)
             time.sleep(3.0)
             
             self.acc_log("Ingresando contraseña...")
@@ -2943,7 +2944,8 @@ class ProxyFarmApp(ctk.CTk):
             self.acc_log("Avanzando (Siguiente)...")
             self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # Enter
             time.sleep(1.0)
-            self.adb.run_command(["shell", "input", "tap", "540", "1100"], serial) # Clic respaldo boton Siguiente abajo
+            # El boton blanco de siguiente esta mas arriba, en Y=850 aprox.
+            self.adb.run_command(["shell", "input", "tap", "540", "850"], serial)
             time.sleep(3.0)
             
             self.acc_log("Ajustando Fecha de Nacimiento (Rueda)...")
@@ -2953,7 +2955,9 @@ class ProxyFarmApp(ctk.CTk):
                 time.sleep(0.3)
             time.sleep(1.0)
             self.acc_log("Avanzando (Siguiente)...")
-            self.adb.run_command(["shell", "input", "tap", "540", "1000"], serial) # Botón Siguiente
+            self.adb.run_command(["shell", "input", "tap", "540", "1000"], serial)
+            time.sleep(1.0)
+            self.adb.run_command(["shell", "input", "tap", "540", "850"], serial) # Backup tap
             time.sleep(3.0)
             
             self.acc_log("Seleccionando Género (Masculino)...")
@@ -2963,7 +2967,7 @@ class ProxyFarmApp(ctk.CTk):
             self.acc_log("✅ Proceso automático finalizado.")
             self.acc_log("👀 Abriendo pantalla. ¡Dale a 'Crear Cuenta' para terminar!", "success")
             
-            self.after(0, lambda: self.launch_scrcpy(serial))
+            # self.after(0, lambda: self.launch_scrcpy(serial)) # Desactivado para no abrir duplicados
             
         except Exception as e:
             self.acc_log(f"Falla en el registro App: {str(e)}", "error")

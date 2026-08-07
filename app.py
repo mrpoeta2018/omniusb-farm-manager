@@ -2920,6 +2920,11 @@ class ProxyFarmApp(ctk.CTk):
                 self.adb.run_command(["shell", "input", "tap", "540", "1820"], serial)
             time.sleep(4.0)
             
+            # Evitar popup de Google Smart Lock tocando la parte superior (logo de Spotify)
+            self.acc_log("Descartando posible popup de Smart Lock...")
+            self.adb.run_command(["shell", "input", "tap", "540", "150"], serial)
+            time.sleep(1.0)
+            
             # 3. Escribir Correo (se enfoca por defecto)
             self.acc_log("Ingresando correo...")
             self.adb.run_command(["shell", "input", "tap", "540", "500"], serial) # Clic respaldo para enfocar campo usuario

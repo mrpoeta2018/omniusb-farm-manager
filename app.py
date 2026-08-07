@@ -2946,8 +2946,22 @@ class ProxyFarmApp(ctk.CTk):
             self.adb.run_command(["shell", "input", "tap", "540", "1100"], serial) # Clic respaldo boton Siguiente abajo
             time.sleep(3.0)
             
+            self.acc_log("Ajustando Fecha de Nacimiento (Rueda)...")
+            # Girar la rueda del año (columna derecha) hacia abajo para hacerlo mayor de edad (ej. 1995)
+            for _ in range(4):
+                self.adb.run_command(["shell", "input", "swipe", "880", "500", "880", "900", "150"], serial)
+                time.sleep(0.3)
+            time.sleep(1.0)
+            self.acc_log("Avanzando (Siguiente)...")
+            self.adb.run_command(["shell", "input", "tap", "540", "1000"], serial) # Botón Siguiente
+            time.sleep(3.0)
+            
+            self.acc_log("Seleccionando Género (Masculino)...")
+            self.adb.run_command(["shell", "input", "tap", "750", "450"], serial) # Masculino
+            time.sleep(2.0)
+            
             self.acc_log("✅ Proceso automático finalizado.")
-            self.acc_log("👀 Abriendo pantalla. ¡Selecciona Fecha, Género y Nombre para terminar!", "success")
+            self.acc_log("👀 Abriendo pantalla. ¡Dale a 'Crear Cuenta' para terminar!", "success")
             
             self.after(0, lambda: self.launch_scrcpy(serial))
             

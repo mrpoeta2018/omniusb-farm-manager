@@ -379,15 +379,29 @@ class ScanProgressWindow(ctk.CTkToplevel):
         
         threading.Thread(target=self.run_scan, daemon=True).start()
 
+    def _safe_lbl(self, txt):
+        try:
+            if self.winfo_exists(): self.status_lbl.configure(text=txt)
+        except: pass
+
+    def _safe_prog(self, val):
+        try:
+            if self.winfo_exists(): self.progress.set(val)
+        except: pass
+
     def run_scan(self):
-        self.progress.set(0.3)
-        self.after(500, lambda: self.status_lbl.configure(text="Esperando respuesta de hubs USB..."))
-        devs = self.adb.list_devices() # This also fetches models now
-        self.progress.set(0.8)
-        self.after(500, lambda: self.status_lbl.configure(text=f"¡Encontrados {len(devs)} teléfonos!"))
+        self.after(0, lambda: self._safe_prog(0.3))
+        self.after(500, lambda: self._safe_lbl("Esperando respuesta de hubs USB..."))
+        devs = self.adb.list_devices()
+        self.after(0, lambda: self._safe_prog(0.8))
+        self.after(500, lambda: self._safe_lbl(f"📱 Encontrados {len(devs)} teléfonos!"))
+        import time
         time.sleep(1)
-        self.after(0, self.finish_cb, devs)
-        self.destroy()
+        try:
+            if self.winfo_exists():
+                self.after(0, self.finish_cb, devs)
+                self.after(0, self.destroy)
+        except: pass
 
 class SetupProgressWindow(ctk.CTkToplevel):
     def __init__(self, master, devices, proxies, b_size, mins, tunnel_disabled=False):

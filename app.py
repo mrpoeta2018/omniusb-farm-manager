@@ -2931,8 +2931,11 @@ class ProxyFarmApp(ctk.CTk):
             self.acc_log("Avanzando (Siguiente)...")
             self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # Enter
             time.sleep(1.0)
-            # El boton blanco de siguiente esta mas arriba, en Y=850 aprox.
-            self.adb.run_command(["shell", "input", "tap", "540", "850"], serial)
+            # Búsqueda exacta del botón Siguiente
+            click_ok = self.find_and_click_by_text(serial, ["Siguiente", "Next"])
+            if not click_ok:
+                self.acc_log("No se vio Siguiente, toque ciego de respaldo...")
+                self.adb.run_command(["shell", "input", "tap", "540", "850"], serial)
             time.sleep(3.0)
             
             self.acc_log("Ingresando contraseña...")
@@ -2944,8 +2947,11 @@ class ProxyFarmApp(ctk.CTk):
             self.acc_log("Avanzando (Siguiente)...")
             self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # Enter
             time.sleep(1.0)
-            # El boton blanco de siguiente esta mas arriba, en Y=850 aprox.
-            self.adb.run_command(["shell", "input", "tap", "540", "850"], serial)
+            # Búsqueda exacta del botón Siguiente
+            click_ok = self.find_and_click_by_text(serial, ["Siguiente", "Next"])
+            if not click_ok:
+                self.acc_log("No se vio Siguiente, toque ciego de respaldo...")
+                self.adb.run_command(["shell", "input", "tap", "540", "850"], serial)
             time.sleep(3.0)
             
             self.acc_log("Ajustando Fecha de Nacimiento (Rueda)...")
@@ -2955,9 +2961,9 @@ class ProxyFarmApp(ctk.CTk):
                 time.sleep(0.3)
             time.sleep(1.0)
             self.acc_log("Avanzando (Siguiente)...")
-            self.adb.run_command(["shell", "input", "tap", "540", "1000"], serial)
-            time.sleep(1.0)
-            self.adb.run_command(["shell", "input", "tap", "540", "850"], serial) # Backup tap
+            click_ok = self.find_and_click_by_text(serial, ["Siguiente", "Next"])
+            if not click_ok:
+                self.adb.run_command(["shell", "input", "tap", "540", "1000"], serial)
             time.sleep(3.0)
             
             self.acc_log("Seleccionando Género (Masculino)...")

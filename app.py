@@ -2673,7 +2673,7 @@ class ProxyFarmApp(ctk.CTk):
         self.tab_accounts.grid_rowconfigure(0, weight=1)
 
         # Panel Izquierdo: Controles
-        left_frame = ctk.CTkFrame(self.tab_accounts, fg_color="#1E293B", corner_radius=8)
+        left_frame = ctk.CTkScrollableFrame(self.tab_accounts, fg_color="#1E293B", corner_radius=8)
         left_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
 
         ctk.CTkLabel(left_frame, text="👤 Creador de Cuentas Automático", font=("Arial", 16, "bold"), text_color="#F59E0B").pack(pady=10)
@@ -2926,7 +2926,7 @@ class ProxyFarmApp(ctk.CTk):
             rnd_num = random.randint(10000, 99999)
             email = f"{prefix}{rnd_num}@{domain}"
             threading.Thread(target=self._spotify_app_signup_thread, args=(serial, email, pwd), daemon=True).start()
-            time.sleep(2) # Retraso para no saturar ADB
+            time.sleep(4) # Retraso para no saturar ADB
 
     def _spotify_app_signup_thread(self, serial, email, pwd):
         import time
@@ -2966,6 +2966,22 @@ class ProxyFarmApp(ctk.CTk):
             click_ok = self.find_and_click_by_text(serial, ["Siguiente", "Next"])
             if not click_ok:
                 self.acc_log("No se vio Siguiente, toque ciego de respaldo...")
+                self.adb.run_command(["shell", "input", "tap", "540", "850"], serial)
+            
+            self.acc_log("Esperando 8s a que cargue la pantalla de contraseña...")
+            time.sleep(8.0)
+            
+            self.acc_log("Ingresando contraseña...")
+            self.adb.run_command(["shell", "input", "tap", "540", "500"], serial)
+            time.sleep(0.5)
+            self.adb.run_command(["shell", "input", "text", pwd], serial)
+            time.sleep(1.0)
+            
+            self.acc_log("Avanzando (Siguiente)...")
+            self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # Enter
+            time.sleep(1.0)
+            click_ok2 = self.find_and_click_by_text(serial, ["Siguiente", "Next"])
+            if not click_ok2:
                 self.adb.run_command(["shell", "input", "tap", "540", "850"], serial)
             time.sleep(3.0)
             

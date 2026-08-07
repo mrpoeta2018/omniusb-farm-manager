@@ -777,7 +777,7 @@ class ProxyFarmApp(ctk.CTk):
                 self.after(0, lambda: self.update_status_lbl.configure(text="🚀 Nueva actualización!", text_color="#10B981"))
                 self.after(0, self._show_update_bar, remote_info)
             else:
-                self.after(0, lambda: self.update_status_lbl.configure(text="✅ App al día", text_color="#3B82F6"))
+                self.after(0, lambda: self.update_status_lbl.configure(text=f"✅ App al día (v{get_local_version().get('version', '?')})", text_color="#3B82F6"))
                 
         check_for_updates_async(_on_result)
 
@@ -2668,6 +2668,16 @@ class ProxyFarmApp(ctk.CTk):
         ctk.CTkLabel(left_frame, text="📱 Seleccionar Celular:", font=("Arial", 12)).pack(pady=(10, 2))
         self.account_device_combo = ctk.CTkComboBox(left_frame, values=["No hay celulares"], width=250)
         self.account_device_combo.pack(pady=5)
+
+        def _open_scrcpy_accounts():
+            serial = self.account_device_combo.get()
+            if serial and serial != "No hay celulares":
+                self.launch_scrcpy(serial)
+            else:
+                messagebox.showwarning("Aviso", "Selecciona un celular válido.")
+
+        ctk.CTkButton(left_frame, text="👀 Ver Pantalla (Scrcpy)", width=250, fg_color="#10B981", text_color="white", command=_open_scrcpy_accounts).pack(pady=5)
+
 
         # Prefijo del correo
         ctk.CTkLabel(left_frame, text="📧 Prefijo del Correo (Aleatorio):", font=("Arial", 11)).pack(pady=(10, 2))

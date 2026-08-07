@@ -2102,7 +2102,7 @@ class ProxyFarmApp(ctk.CTk):
                 "scrcpy no está instalado.\n\nCierra la app y ejecuta START_APP.bat para que se descargue automáticamente.")
             return
         try:
-            subprocess.Popen([scrcpy_exe, "-s", serial, "--window-title", f"📱 {serial}"],
+            subprocess.Popen([scrcpy_exe, "-s", serial, "--window-title", f"📱 {serial}", "--no-audio"],
                              cwd=os.path.join(base, "scrcpy"))
             self.log_msg(f"👁️ Pantalla abierta: {serial}")
         except Exception as e:

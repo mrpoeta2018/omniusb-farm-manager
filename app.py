@@ -2956,10 +2956,11 @@ class ProxyFarmApp(ctk.CTk):
             
             self.acc_log("Ajustando Fecha de Nacimiento (Rueda)...")
             # Swipe lento y largo para asegurar que la rueda gire en cualquier resolución
-            for _ in range(3):
-                self.adb.run_command(["shell", "input", "swipe", "650", "400", "650", "900", "400"], serial)
+            for _ in range(2):
+                # 1500ms duration simulates a click-hold and drag
+                self.adb.run_command(["shell", "input", "swipe", "650", "450", "650", "900", "1500"], serial)
                 time.sleep(0.5)
-                self.adb.run_command(["shell", "input", "swipe", "750", "400", "750", "900", "400"], serial)
+                self.adb.run_command(["shell", "input", "swipe", "750", "450", "750", "900", "1500"], serial)
                 time.sleep(0.5)
             time.sleep(1.0)
             
@@ -2975,9 +2976,11 @@ class ProxyFarmApp(ctk.CTk):
             if popup_ok:
                 self.acc_log("Apareció el popup. Girando la rueda mucho más...", "warn")
                 time.sleep(1.0)
-                for _ in range(5):
-                    self.adb.run_command(["shell", "input", "swipe", "650", "300", "650", "1000", "300"], serial)
-                    time.sleep(0.4)
+                for _ in range(3):
+                    self.adb.run_command(["shell", "input", "swipe", "650", "450", "650", "1000", "1500"], serial)
+                    time.sleep(0.5)
+                    self.adb.run_command(["shell", "input", "swipe", "750", "450", "750", "1000", "1500"], serial)
+                    time.sleep(0.5)
                 self.find_and_click_by_text(serial, ["Siguiente", "Next"])
                 time.sleep(3.0)
             

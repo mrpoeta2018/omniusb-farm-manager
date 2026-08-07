@@ -613,7 +613,7 @@ class ProxyFarmApp(ctk.CTk):
         self.master_mode.trace_add("write", lambda *args: self.update_ui_state())
         self.mixed_turn = "spotify"
 
-        self.media_rotation_active = ctk.BooleanVar(value=True) # Media Injection On/Off
+        self.media_rotation_active = ctk.BooleanVar(value=False) # Media Injection On/Off
         
         # Obsolete network rotation state
         self.network_rotation_enabled = ctk.BooleanVar(value=False)

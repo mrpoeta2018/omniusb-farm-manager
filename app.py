@@ -2955,16 +2955,31 @@ class ProxyFarmApp(ctk.CTk):
             time.sleep(3.0)
             
             self.acc_log("Ajustando Fecha de Nacimiento (Rueda)...")
-            # Girar la rueda del año (columna derecha) hacia abajo para hacerlo mayor de edad (ej. 1995)
-            for _ in range(4):
-                self.adb.run_command(["shell", "input", "swipe", "880", "500", "880", "900", "150"], serial)
-                time.sleep(0.3)
+            # Swipe lento y largo para asegurar que la rueda gire en cualquier resolución
+            for _ in range(3):
+                self.adb.run_command(["shell", "input", "swipe", "650", "400", "650", "900", "400"], serial)
+                time.sleep(0.5)
+                self.adb.run_command(["shell", "input", "swipe", "750", "400", "750", "900", "400"], serial)
+                time.sleep(0.5)
             time.sleep(1.0)
+            
             self.acc_log("Avanzando (Siguiente)...")
             click_ok = self.find_and_click_by_text(serial, ["Siguiente", "Next"])
             if not click_ok:
                 self.adb.run_command(["shell", "input", "tap", "540", "1000"], serial)
             time.sleep(3.0)
+            
+            # Revisar si salió el popup de confirmación de edad
+            self.acc_log("Revisando si apareció popup de edad...")
+            popup_ok = self.find_and_click_by_text(serial, ["cambiar la fecha", "No, cambiar"])
+            if popup_ok:
+                self.acc_log("Apareció el popup. Girando la rueda mucho más...", "warn")
+                time.sleep(1.0)
+                for _ in range(5):
+                    self.adb.run_command(["shell", "input", "swipe", "650", "300", "650", "1000", "300"], serial)
+                    time.sleep(0.4)
+                self.find_and_click_by_text(serial, ["Siguiente", "Next"])
+                time.sleep(3.0)
             
             self.acc_log("Seleccionando Género (Masculino)...")
             self.adb.run_command(["shell", "input", "tap", "750", "450"], serial) # Masculino

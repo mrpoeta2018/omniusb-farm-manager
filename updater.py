@@ -55,9 +55,11 @@ def download_update(download_url, callback_progress=None, callback_done=None):
         if os.path.exists(git_dir):
             try:
                 if callback_progress:
-                    callback_progress("Actualizando desde GitHub...")
+                    callback_progress("Actualizando desde GitHub (Hard Reset)...")
                 import subprocess
-                res = subprocess.run(["git", "pull"], capture_output=True, text=True, check=True)
+                subprocess.run(["git", "fetch", "origin", "main"], capture_output=True, text=True, check=True)
+                subprocess.run(["git", "reset", "--hard", "origin/main"], capture_output=True, text=True, check=True)
+                res = subprocess.run(["git", "pull", "origin", "main"], capture_output=True, text=True, check=True)
                 print("Git pull output:", res.stdout)
                 
                 # Instalar dependencias si cambiaron

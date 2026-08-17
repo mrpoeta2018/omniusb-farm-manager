@@ -1066,7 +1066,7 @@ class ProxyFarmApp(ctk.CTk):
                         rnd_url = random.choice(pool_urls)
                         self._inject_generic_audio_to_single(dev['serial'], rnd_url, package)
                         
-                    s_sleep(1.5)
+                    time.sleep(1.5)
             threading.Thread(target=_mass_inject, daemon=True).start()
 
     def inject_manual_playlist(self):
@@ -1091,7 +1091,7 @@ class ProxyFarmApp(ctk.CTk):
                 for dev in self.engine.active_devices:
                     rnd_url = random.choice(playlists)
                     self._inject_playlist_to_single(dev['serial'], rnd_url)
-                    s_sleep(1.5)
+                    time.sleep(1.5)
             threading.Thread(target=_mass_inject, daemon=True).start()
         else:
             self.log_msg("⚠️ El túnel no está iniciado.", "warn")
@@ -1117,7 +1117,7 @@ class ProxyFarmApp(ctk.CTk):
                 for dev in self.engine.active_devices:
                     rnd_url = random.choice(urls)
                     self._inject_youtube_to_single(dev['serial'], rnd_url)
-                    s_sleep(1.5)
+                    time.sleep(1.5)
             threading.Thread(target=_mass_inject, daemon=True).start()
         else:
             self.log_msg("⚠️ El túnel no está iniciado.", "warn")
@@ -1144,7 +1144,7 @@ class ProxyFarmApp(ctk.CTk):
                 for dev in self.engine.active_devices:
                     rnd_url = random.choice(urls)
                     self._inject_youtube_to_single(dev['serial'], rnd_url)
-                    s_sleep(1.5)
+                    time.sleep(1.5)
             threading.Thread(target=_mass_inject, daemon=True).start()
         else:
             self.log_msg("⚠️ El túnel no está iniciado.", "warn")
@@ -1209,7 +1209,7 @@ class ProxyFarmApp(ctk.CTk):
                         package = pool_data[2]
                         self._inject_generic_audio_to_single(dev['serial'], rnd_url, package)
                         
-                    s_sleep(1.5)
+                    time.sleep(1.5)
             threading.Thread(target=_mass_inject, daemon=True).start()
         else:
             self.log_msg("⚠️ El túnel no está iniciado.", "warn")
@@ -1236,7 +1236,7 @@ class ProxyFarmApp(ctk.CTk):
         self.adb.run_command(["shell", "am", "force-stop", "com.google.android.youtube"], serial)
         self.adb.run_command(["shell", "am", "force-stop", "com.google.android.apps.youtube.music"], serial)
         # Nota: NO hacemos force-stop a Spotify porque destruye el MediaSession y evita que el botón Play/Next funcione.
-        s_sleep(2.0)
+        time.sleep(2.0)
         
         # Iniciar Spotify con la URL
         self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", safe_url], serial)
@@ -1264,7 +1264,7 @@ class ProxyFarmApp(ctk.CTk):
         def _mass_inject():
             for dev in self.engine.active_devices:
                 self._inject_playlist_to_single(dev['serial'], playlist_url)
-                s_sleep(1.5)
+                time.sleep(1.5)
         threading.Thread(target=_mass_inject, daemon=True).start()
 
     def update_playlist_ui(self, *args):
@@ -1344,7 +1344,7 @@ class ProxyFarmApp(ctk.CTk):
         
         self.adb.run_command(["shell", "input", "keyevent", "224"], serial)
         self.adb.run_command(["shell", "am", "force-stop", package_name], serial)
-        s_sleep(2.0)
+        time.sleep(2.0)
         
         self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", safe_url], serial)
         
@@ -1377,7 +1377,7 @@ class ProxyFarmApp(ctk.CTk):
             for dev in self.engine.active_devices:
                 rnd_url = random.choice(urls)
                 self._inject_generic_audio_to_single(dev['serial'], rnd_url, package)
-                s_sleep(1.5)
+                time.sleep(1.5)
         threading.Thread(target=_mass, daemon=True).start()
 
     def inject_manual_awa(self): self._inject_mass_generic(self.awa_textbox, "AWA", "fm.awa.app")
@@ -1416,7 +1416,7 @@ class ProxyFarmApp(ctk.CTk):
         
         # 5. Force stop the correct app to prevent buffer lock
         self.adb.run_command(["shell", "am", "force-stop", target_app], serial)
-        s_sleep(3.0) # Dar más tiempo a liberar memoria y red
+        time.sleep(3.0) # Dar más tiempo a liberar memoria y red
         
         # 6. Launch URL
         if is_web_mode:
@@ -1454,7 +1454,7 @@ class ProxyFarmApp(ctk.CTk):
         def _mass_inject():
             for dev in self.engine.active_devices:
                 self._inject_youtube_to_single(dev['serial'], url)
-                s_sleep(1.5) # Stagger mass injection too
+                time.sleep(1.5) # Stagger mass injection too
         threading.Thread(target=_mass_inject, daemon=True).start()
 
     def update_youtube_ui(self, *args):
@@ -1586,7 +1586,9 @@ class ProxyFarmApp(ctk.CTk):
             ("Audiomack", "audiomack.apk", "com.audiomack", "#F59E0B"),
             ("Apple Music", "applemusic.apk", "com.apple.android.music", "#EF4444"),
             ("Tidal", "tidal.apk", "com.aspiro.tidal", "#06B6D4"),
-            ("Amazon Music", "amazonmusic.apk", "com.amazon.mp3", "#FF9900")
+            ("Amazon Music", "amazonmusic.apk", "com.amazon.mp3", "#FF9900"),
+            ("Instagram", "instagram.apk", "com.instagram.android", "#E1306C"),
+            ("Kick", "kick.apk", "com.kick.mobile", "#53FC18")
         ]
         
         for name, apk, pkg, color in app_list:
@@ -1919,6 +1921,7 @@ class ProxyFarmApp(ctk.CTk):
                     self.kick_textbox.delete("1.0", "end")
                     self.kick_textbox.insert("1.0", data["kick_playlists"].strip() + "\n")
                 if hasattr(self, 'ig_auto') and "ig_auto" in data: self.ig_auto.set(data["ig_auto"])
+                if hasattr(self, 'ig_interact') and "ig_interact" in data: self.ig_interact.set(data["ig_interact"])
                 if hasattr(self, 'kick_auto') and "kick_auto" in data: self.kick_auto.set(data["kick_auto"])
                 if hasattr(self, 'use_spotify') and "use_spotify" in data: self.use_spotify.set(data["use_spotify"])
                 if hasattr(self, 'use_ytmusic') and "use_ytmusic" in data: self.use_ytmusic.set(data["use_ytmusic"])
@@ -1964,6 +1967,7 @@ class ProxyFarmApp(ctk.CTk):
                 "ig_playlists": self.ig_textbox.get("1.0", "end").strip() if hasattr(self, 'ig_textbox') else "",
                 "kick_playlists": self.kick_textbox.get("1.0", "end").strip() if hasattr(self, 'kick_textbox') else "",
                 "ig_auto": self.ig_auto.get() if hasattr(self, 'ig_auto') else True,
+                "ig_interact": self.ig_interact.get() if hasattr(self, 'ig_interact') else False,
                 "kick_auto": self.kick_auto.get() if hasattr(self, 'kick_auto') else True,
                 "youtube_drip": self.youtube_drip_var.get(),
                 "watchdog_enabled": self.watchdog_enabled.get(),
@@ -2671,7 +2675,7 @@ class ProxyFarmApp(ctk.CTk):
                             # Bajar volumen 15 veces para asegurar el 0%
                             for _ in range(15):
                                 self.adb.run_command(["shell", "input", "keyevent", "25"], serial)
-                            s_sleep(0.5)
+                            time.sleep(0.5)
                             # Subir volumen de 2 a 3 veces (~12% a 18% máximo)
                             for _ in range(random.randint(2, 3)):
                                 self.adb.run_command(["shell", "input", "keyevent", "24"], serial)
@@ -2693,6 +2697,8 @@ class ProxyFarmApp(ctk.CTk):
         ig_frame.pack(fill="x", pady=10)
         self.ig_auto = ctk.BooleanVar(value=True)
         ctk.CTkCheckBox(ig_frame, text="✨ Instagram (Posts/Reels) | Auto-Like y Swipe:", font=("Arial", 12, "bold"), text_color="white", variable=self.ig_auto).pack(anchor="w", padx=10, pady=5)
+        self.ig_interact = ctk.BooleanVar(value=False)
+        ctk.CTkCheckBox(ig_frame, text="🗣️ Interacción Avanzada (Comentar/Compartir/Guardar)", font=("Arial", 11), text_color="white", variable=self.ig_interact).pack(anchor="w", padx=10, pady=(0,5))
         self.ig_textbox = ctk.CTkTextbox(ig_frame, height=80)
         self.ig_textbox.pack(padx=10, pady=(0,5), fill="x")
         btn_ig = ctk.CTkButton(ig_frame, text="▶ Inyectar Instagram", fg_color="#BE185D", command=self.inject_ig)
@@ -2710,6 +2716,96 @@ class ProxyFarmApp(ctk.CTk):
         
         ctk.CTkButton(self.tab_social, text="💾 Guardar Cambios", fg_color="#10B981", command=self.save_config).pack(pady=10)
 
+    def interact_ig_post(self, s):
+        self.log_msg(f"Iniciando interacción avanzada en {s}...", "info")
+        import random
+        # 1. Intentar ver si ya tiene like mediante XML
+        self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], s)
+        local_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"dump_{s}.xml")
+        self.adb.run_command(["pull", "/sdcard/window_dump.xml", local_path], s)
+        
+        has_like = False
+        import xml.etree.ElementTree as ET
+        try:
+            tree = ET.parse(local_path)
+            root = tree.getroot()
+            os.remove(local_path)
+            for node in root.iter():
+                desc = node.get("content-desc", "").lower()
+                text = node.get("text", "").lower()
+                if "ya no me gusta" in desc or "ya no me gusta" in text:
+                    has_like = True
+                    break
+        except Exception:
+            pass # Si falla el dump (ej. en Reels), asumimos que no sabemos.
+        
+        # 2. Like Inteligente (sin doble toque a ciegas)
+        if not has_like:
+            self.log_msg("Like no detectado, dando Like...", "info")
+            # Toque en coordenada típica de Like (centro-derecha en Reels o abajo-izq en Posts)
+            # Para evitar quitar el like con doble toque, usamos tap en la zona del corazón (aprox 650, 700 en reels)
+            # Pero como puede ser un post normal, lo más seguro es tocar en X=70, Y=1050 (corazón de posts)
+            # o intentar doble toque solo si estamos seguros.
+            # Por ahora, un doble toque en un punto que NO sea el centro para no pausar el reel
+            self.adb.run_command(["shell", "input", "tap", "500", "800"], s)
+            time.sleep(0.2)
+            self.adb.run_command(["shell", "input", "tap", "500", "800"], s)
+            time.sleep(2)
+        else:
+            self.log_msg("El post ya tiene Like. Saltando...", "info")
+            
+        # 3. Comentar (Ocasional)
+        if random.random() < 0.3: # 30% de probabilidad de comentar
+            self.log_msg("Comentando...", "info")
+            click_comment = self.find_and_click_by_text(s, ["comentar", "comment"])
+            if not click_comment:
+                # Coordenada de respaldo para comentar
+                self.adb.run_command(["shell", "input", "tap", "150", "1050"], s)
+            time.sleep(3)
+            
+            comentarios = ["Fuegooo 🔥", "Genial!", "Totalmente de acuerdo 💯", "Muy buen post", "👏👏👏"]
+            com = random.choice(comentarios)
+            self.adb.run_command(["shell", "input", "text", f"'{com}'"], s)
+            time.sleep(2)
+            # Enviar (suele estar arriba a la derecha o al lado del teclado)
+            self.adb.run_command(["shell", "input", "tap", "650", "950"], s)
+            time.sleep(3)
+            # Salir de comentarios
+            self.adb.run_command(["shell", "input", "keyevent", "4"], s)
+            time.sleep(1)
+            
+        # 4. Guardar (Ocasional)
+        if random.random() < 0.5:
+            self.log_msg("Guardando post...", "info")
+            click_save = self.find_and_click_by_text(s, ["guardar", "save"])
+            if not click_save:
+                self.adb.run_command(["shell", "input", "tap", "650", "1050"], s)
+            time.sleep(1)
+
+        # 5. Compartir en Historia (Ocasional)
+        if random.random() < 0.2: # 20% de probabilidad
+            self.log_msg("Compartiendo en Historia...", "info")
+            click_share = self.find_and_click_by_text(s, ["enviar", "compartir", "share", "send"])
+            if not click_share:
+                # Botón de enviar típico (Avioncito)
+                self.adb.run_command(["shell", "input", "tap", "650", "950"], s)
+            time.sleep(3)
+            
+            # Tocar 'Agregar a historia' (suele estar abajo a la izquierda en el popup)
+            click_add = self.find_and_click_by_text(s, ["agregar a historia", "add to story"])
+            if not click_add:
+                self.adb.run_command(["shell", "input", "tap", "150", "1100"], s)
+            time.sleep(6) # Esperar que cargue el editor de historias
+            
+            # Tocar 'Tu historia' para publicar
+            click_tu_historia = self.find_and_click_by_text(s, ["tu historia", "your story"])
+            if not click_tu_historia:
+                # Coordenada típica del botón 'Tu historia'
+                self.adb.run_command(["shell", "input", "tap", "160", "1260"], s)
+            time.sleep(4)
+            self.log_msg("✅ Compartido en historia exitosamente.", "success")
+
+
     def inject_ig(self):
         if not hasattr(self, 'engine') or not getattr(self.engine, 'active_devices', []):
             self.log_msg("⚠️ El túnel no está iniciado.", "warn")
@@ -2717,23 +2813,80 @@ class ProxyFarmApp(ctk.CTk):
         urls = [u.strip() for u in self.ig_textbox.get("1.0", "end").strip().split('\n') if u.strip()]
         if not urls: return
         import random
+        import re
+        
         def _bot():
             for dev in self.engine.active_devices:
                 url = random.choice(urls)
                 s = dev['serial']
-                self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", f"'{url}'", "com.instagram.android"], s)
+                
+                # Extraer username y construir deep link
+                username = ""
+                m = re.search(r"instagram\.com/([^/?]+)", url)
+                if m:
+                    username = m.group(1)
+                    deep_link = f"instagram://user?username={username}"
+                else:
+                    deep_link = url # Fallback
+                
+                self.log_msg(f"Abriendo IG: {username} en {s}...")
+                
+                # Cierra IG para refrescarlo
+                self.adb.run_command(["shell", "am", "force-stop", "com.instagram.android"], s)
+                time.sleep(1)
+                
+                # Inicia el Deep Link nativo
+                self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", f"'{deep_link}'", "com.instagram.android"], s)
+                
                 if self.ig_auto.get():
-                    time.sleep(8)
-                    # Double tap center for Like
-                    self.adb.run_command(["shell", "input", "tap", "500", "1000"], s)
-                    s_sleep(0.5)
-                    self.adb.run_command(["shell", "input", "tap", "500", "1000"], s)
-                    time.sleep(4)
-                    # Swipe up
-                    self.adb.run_command(["shell", "input", "swipe", "500", "1500", "500", "300", "400"], s)
+                    self.log_msg(f"Esperando carga del perfil en {s}...", "info")
+                    time.sleep(15) # Espera buena carga
+                    
+                    self.log_msg(f"Buscando botón 'Seguir' en {s}...", "info")
+                    click_seguir = self.find_and_click_by_text(s, [f"Seguir a {username}", "Seguir", "Follow"])
+                    if click_seguir:
+                        self.log_msg(f"✅ ¡Follow enviado a {username}!", "success")
+                        time.sleep(2)
+                    
+                    # Decidir aleatoriamente entre Historias o Publicaciones para no chocar
+                    modo = random.choice(["historias", "publicaciones"])
+                    self.log_msg(f"Decidió interactuar con: {modo}", "info")
+                    
+                    if modo == "historias":
+                        click_foto = self.find_and_click_by_text(s, ["Foto del perfil", "Profile photo", "Historia vista", "Historia no vista", "Historia de"])
+                        if click_foto:
+                            self.log_msg(f"✅ Viendo historias de {username}", "success")
+                            time.sleep(30)
+                        else:
+                            self.log_msg("No hay historias disponibles. Cancelando.", "warn")
+                    else:
+                        # Modo publicaciones / Reels
+                        self.log_msg(f"Deslizando para buscar publicaciones de {username}", "info")
+                        # Hacemos 2 swipes largos para asegurar pasar las Historias Destacadas (Highlights)
+                        self.adb.run_command(["shell", "input", "swipe", "360", "1200", "360", "200"], s)
+                        time.sleep(1)
+                        self.adb.run_command(["shell", "input", "swipe", "360", "1200", "360", "200"], s)
+                        time.sleep(2)
+                        
+                        # Buscamos específicamente un cuadro de la cuadrícula de publicaciones o reels
+                        click_post = self.find_and_click_by_text(s, ["columna 1", "columna 2", "column 1"])
+                        if not click_post:
+                            self.log_msg(f"Usando toque de respaldo para abrir reel...", "warn")
+                            # Toque de respaldo más abajo para asegurar tocar la cuadrícula y no las historias destacadas
+                            self.adb.run_command(["shell", "input", "tap", "200", "850"], s)
+                        
+                        self.log_msg(f"✅ Viendo publicaciones de {username}", "success")
+                        time.sleep(4)
+                        
+                        if getattr(self, 'ig_interact', None) and self.ig_interact.get():
+                            self.interact_ig_post(s)
+                        
+                        # Swipe Up suave y largo (de abajo hacia arriba)
+                        self.adb.run_command(["shell", "input", "swipe", "360", "1100", "360", "150"], s)
+                        
                 time.sleep(2)
         threading.Thread(target=_bot, daemon=True).start()
-        self.log_msg("✨ Inyectando Instagram...", "info")
+        self.log_msg("✨ Inyectando Instagram con automatización Inteligente...", "info")
 
     def inject_kick(self):
         if not hasattr(self, 'engine') or not getattr(self.engine, 'active_devices', []):
@@ -2815,12 +2968,6 @@ class ProxyFarmApp(ctk.CTk):
         self.acc_password_entry.pack(pady=2)
         self.acc_password_entry.insert(0, "Androide10")
 
-        # Artistas a seguir
-        ctk.CTkLabel(left_frame, text="🎸 Artistas a seguir (separados por coma):", font=("Arial", 11)).pack(pady=(10, 2))
-        self.acc_artists_entry = ctk.CTkTextbox(left_frame, width=250, height=60)
-        self.acc_artists_entry.pack(pady=2)
-        self.acc_artists_entry.insert("1.0", "Bad Bunny, Feid, Karol G, Drake")
-
         # Botones de Acción
         ctk.CTkLabel(left_frame, text="⚡ Controles de Automatización", font=("Arial", 12, "bold")).pack(pady=(15, 5))
         
@@ -2829,18 +2976,8 @@ class ProxyFarmApp(ctk.CTk):
         
         self.btn_login_acc = ctk.CTkButton(left_frame, text="🚀 2. Iniciar Sesión App (Auto A Ciegas)", fg_color="#6366F1", hover_color="#4F46E5", command=self.start_spotify_login, height=35)
         self.btn_login_acc.pack(pady=5, fill="x", padx=30)
-        
-        self.acc_slow_mode_var = ctk.BooleanVar(value=False)
-        self.chk_slow_mode = ctk.CTkCheckBox(left_frame, text="🐢 Modo Lento (Para celulares lentos)", variable=self.acc_slow_mode_var)
-        self.chk_slow_mode.pack(pady=5, padx=30, anchor="w")
-        
         self.btn_signup_acc = ctk.CTkButton(left_frame, text="✨ 3. Crear Cuenta en App (A Ciegas)", fg_color="#D946EF", hover_color="#C026D3", command=self.start_spotify_app_signup, height=35)
         self.btn_signup_acc.pack(pady=5, fill="x", padx=30)
-        self.btn_follow_artists = ctk.CTkButton(left_frame, text="🎨 4. Seguir Artistas (Opcional)", fg_color="#EC4899", hover_color="#DB2777", command=self.start_spotify_follow_artists, height=35)
-        self.btn_follow_artists.pack(pady=5, fill="x", padx=30)
-        self.btn_stop_signup = ctk.CTkButton(left_frame, text="🛑 Detener Proceso", fg_color="#EF4444", hover_color="#DC2626", command=self.stop_spotify_signup, height=35, state="disabled")
-        self.btn_stop_signup.pack(pady=5, fill="x", padx=30)
-        self.stop_signup = False
 
         
         # Redundancias por si falla uiautomator
@@ -2988,7 +3125,7 @@ class ProxyFarmApp(ctk.CTk):
             self.acc_log("Forzando orientación vertical (Portrait)...")
             self.adb.run_command(["shell", "settings", "put", "system", "accelerometer_rotation", "0"], serial)
             self.adb.run_command(["shell", "settings", "put", "system", "user_rotation", "0"], serial)
-            s_sleep(1.0)
+            time.sleep(1.0)
             
             # Abrir registro de Spotify en Chrome
             signup_url = "https://www.spotify.com/signup"
@@ -3014,173 +3151,29 @@ class ProxyFarmApp(ctk.CTk):
         threading.Thread(target=self._spotify_login_thread, args=(serial,), daemon=True).start()
 
 
-    def stop_spotify_signup(self):
-        self.stop_signup = True
-        self.acc_log("🛑 Detención solicitada. Terminando dispositivo actual...", "warn")
-
     def start_spotify_app_signup(self):
         selected = [s for s, v in self.acc_device_vars.items() if v.get()]
         if not selected:
             self.acc_log("Selecciona al menos un celular", "warn")
             return
             
-        self.btn_signup_acc.configure(state="disabled", text="⏳ Procesando Cola...")
-        if hasattr(self, 'btn_stop_signup'):
-            self.btn_stop_signup.configure(state="normal")
-        self.stop_signup = False
+        self.btn_signup_acc.configure(state="disabled", text="⏳ Iniciando Registros...")
+        import threading
+        import random
+        import time
         
         prefix = self.acc_email_prefix_entry.get().strip()
         domain = self.acc_email_domain_entry.get().strip()
         pwd = self.acc_password_entry.get().strip()
-        artists = self.acc_artists_entry.get("1.0", "end-1c").strip()
         
-        is_slow = getattr(self, 'acc_slow_mode_var', None) and self.acc_slow_mode_var.get()
-        import threading
-        threading.Thread(target=self._master_signup_thread, args=(selected, prefix, domain, pwd, artists, is_slow), daemon=True).start()
+        for serial in selected:
+            rnd_num = random.randint(10000, 99999)
+            email = f"{prefix}{rnd_num}@{domain}"
+            threading.Thread(target=self._spotify_app_signup_thread, args=(serial, email, pwd), daemon=True).start()
+            time.sleep(4) # Retraso para no saturar ADB
 
-    def _master_signup_thread(self, selected, prefix, domain, pwd, artists, is_slow=False):
+    def _spotify_app_signup_thread(self, serial, email, pwd):
         import time
-        import random
-        total_devices = len(selected)
-        success_count = 0
-        failed_count = 0
-        
-        self.acc_log(f"=== INICIANDO COLA SECUENCIAL ({total_devices} Dispositivos) ===")
-        
-        for idx, serial in enumerate(selected):
-            if getattr(self, 'stop_signup', False):
-                self.acc_log("⛔ Proceso cancelado por el usuario.", "error")
-                break
-                
-            self.acc_log(f"--- [Dispositivo {idx+1}/{total_devices}] {serial} ---", "info")
-            max_retries = 2
-            success = False
-            for attempt in range(1, max_retries + 1):
-                if getattr(self, 'stop_signup', False):
-                    break
-                    
-                self.acc_log(f"Intento {attempt}/{max_retries} para {serial}")
-                rnd_num = random.randint(10000, 99999)
-                email = f"{prefix}{rnd_num}@{domain}"
-                
-                self.adb.run_command(["shell", "am", "force-stop", "com.spotify.music"], serial)
-                time.sleep(2)
-                
-                try:
-                    res = self._spotify_app_signup_thread(serial, email, pwd, artists, is_slow)
-                    if res:
-                        success = True
-                        break
-                    else:
-                        self.acc_log(f"Fallo en intento {attempt} para {serial}", "warn")
-                except Exception as e:
-                    self.acc_log(f"Error en {serial}: {e}", "error")
-                    
-                time.sleep(3)
-                
-            if success:
-                success_count += 1
-            else:
-                failed_count += 1
-                self.acc_log(f"❌ {serial} saltado tras {max_retries} intentos.", "error")
-                
-            time.sleep(3)
-            
-        self.acc_log("=== REPORTE FINAL ===")
-        self.acc_log(f"Procesados: {total_devices}")
-        self.acc_log(f"Exitosos: {success_count}", "success")
-        self.acc_log(f"Fallidos: {failed_count}", "error")
-        
-        self.after(0, lambda: self.btn_signup_acc.configure(state="normal", text="✨ 3. Crear Cuenta en App (A Ciegas)"))
-        if hasattr(self, 'btn_stop_signup'):
-            self.after(0, lambda: self.btn_stop_signup.configure(state="disabled"))
-
-    def start_spotify_follow_artists(self):
-        selected = [s for s, v in self.acc_device_vars.items() if v.get()]
-        if not selected:
-            self.acc_log("Selecciona al menos un celular", "warn")
-            return
-            
-        artists = self.acc_artists_entry.get("1.0", "end-1c").strip()
-        if not artists:
-            self.acc_log("Por favor, ingresa al menos un artista en la caja de texto.", "warn")
-            return
-            
-        self.btn_follow_artists.configure(state="disabled", text="⏳ Siguiendo Artistas...")
-        if hasattr(self, 'btn_stop_signup'):
-            self.btn_stop_signup.configure(state="normal")
-        self.stop_signup = False
-        
-        import threading
-        threading.Thread(target=self._master_artists_thread, args=(selected, artists), daemon=True).start()
-
-    def _master_artists_thread(self, selected, artists):
-        import time
-        total_devices = len(selected)
-        success_count = 0
-        
-        self.acc_log(f"=== INICIANDO SEGUIMIENTO DE ARTISTAS ({total_devices} Dispositivos) ===")
-        
-        for idx, serial in enumerate(selected):
-            if getattr(self, 'stop_signup', False):
-                self.acc_log("⛔ Proceso cancelado por el usuario.", "error")
-                break
-                
-            self.acc_log(f"--- [Dispositivo {idx+1}/{total_devices}] {serial} ---", "info")
-            try:
-                res = self._spotify_follow_artists_thread(serial, artists)
-                if res:
-                    success_count += 1
-            except Exception as e:
-                self.acc_log(f"Error crítico en {serial}: {e}", "error")
-                
-            time.sleep(2)
-            
-        self.acc_log("=== REPORTE ARTISTAS ===")
-        self.acc_log(f"Procesados: {total_devices}")
-        self.acc_log(f"Exitosos: {success_count}", "success")
-        
-        self.after(0, lambda: self.btn_follow_artists.configure(state="normal", text="🎨 4. Seguir Artistas (Opcional)"))
-        if hasattr(self, 'btn_stop_signup'):
-            self.after(0, lambda: self.btn_stop_signup.configure(state="disabled"))
-
-    def _spotify_follow_artists_thread(self, serial, artists):
-        import time
-        import os
-        artist_list = [a.strip() for a in artists.split(",") if a.strip()]
-        self.acc_log(f"Procediendo a seguir a {len(artist_list)} artistas...")
-        for art in artist_list:
-            if getattr(self, 'stop_signup', False): return False
-            self.acc_log(f"Buscando a: {art}")
-            
-            search_clicked = self.find_and_click_by_text(serial, ["Busca artistas", "Search artists", "Buscar"])
-            if not search_clicked:
-                self.adb.run_command(["shell", "input", "tap", "360", "200"], serial)
-            time.sleep(1)
-            
-            self.adb.run_command(["shell", "input", "text", f'"{art}"'], serial)
-            s_sleep(2.5)
-            
-            self.adb.run_command(["shell", "input", "tap", "360", "350"], serial) # Tap 1st result
-            time.sleep(1)
-            
-            self.adb.run_command(["shell", "input", "tap", "650", "200"], serial) # X to clear
-            time.sleep(1)
-            
-        self.acc_log("Artistas seleccionados. Pulsando Listo/Siguiente...")
-        self.find_and_click_by_text(serial, ["Listo", "Siguiente", "Next", "Done"])
-        time.sleep(2)
-        self.acc_log(f"✅ Artistas seguidos en {serial}.", "success")
-        return True
-
-
-    def _spotify_app_signup_thread(self, serial, email, pwd, artists="", is_slow=False):
-        import time
-        import os
-        
-        def s_sleep(base_time):
-            time.sleep(base_time * 2.5 if is_slow else base_time)
-            
         try:
             
             self.acc_log(f"🚀 Iniciando Registro App en {serial} (A Ciegas)", "success")
@@ -3190,236 +3183,62 @@ class ProxyFarmApp(ctk.CTk):
             self.acc_log("Forzando orientación vertical...")
             self.adb.run_command(["shell", "settings", "put", "system", "accelerometer_rotation", "0"], serial)
             self.adb.run_command(["shell", "settings", "put", "system", "user_rotation", "0"], serial)
-            s_sleep(1.0)
+            time.sleep(1.0)
             
             self.acc_log("Abriendo app de Spotify...")
             self.adb.run_command(["shell", "am", "start", "-n", "com.spotify.music/com.spotify.music.MainActivity"], serial)
-            self.acc_log(f"Esperando {15 if is_slow else 6}s a que cargue la app...")
-            s_sleep(6.0)
-            
-            self.acc_log("Verificando si ya hay una sesión iniciada...")
-            local_path_check = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"dump_check_{serial}.xml")
-            self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
-            self.adb.run_command(["pull", "/sdcard/window_dump.xml", local_path_check], serial)
-            try:
-                import xml.etree.ElementTree as ET
-                tree = ET.parse(local_path_check)
-                root = tree.getroot()
-                if os.path.exists(local_path_check): os.remove(local_path_check)
-                p_text = " ".join([n.get("text", "") for n in root.iter()]).lower()
-                p_desc = " ".join([n.get("content-desc", "") for n in root.iter()]).lower()
-                full_text = p_text + " " + p_desc
-                if "inicio" in full_text or "tu biblioteca" in full_text or "home" in full_text or "your library" in full_text:
-                    self.acc_log("❌ ¡Alto! La app ya tiene una cuenta iniciada. Abortando registro.", "error")
-                    return False
-            except:
-                pass
+            self.acc_log("Esperando 6s a que cargue la app...")
+            time.sleep(6.0)
             
             self.acc_log("Buscando botón 'Registrarte gratis'...")
-            click_ok = self.find_and_click_by_text(serial, ["Registrarte gratis", "Regístrate gratis", "Registrate gratis", "Sign up free", "Registrarse", "Sign up"])
+            click_ok = self.find_and_click_by_text(serial, ["Registrarte gratis", "Sign up free", "Registrarse", "Sign up"])
             if not click_ok:
                 self.acc_log("Pulsando coordenadas de 'Registrarte gratis'...", "warn")
                 self.adb.run_command(["shell", "input", "tap", "540", "1600"], serial)
-            s_sleep(4.0)
+            time.sleep(4.0)
             
             self.acc_log("Ingresando correo...")
             self.adb.run_command(["shell", "input", "tap", "540", "500"], serial)
-            s_sleep(0.5)
+            time.sleep(0.5)
             self.adb.run_command(["shell", "input", "text", email], serial)
-            s_sleep(1.5)
+            time.sleep(1.5)
             
             self.acc_log("Avanzando (Siguiente)...")
             self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # Enter
-            s_sleep(1.0)
+            time.sleep(1.0)
             # Búsqueda exacta del botón Siguiente
             click_ok = self.find_and_click_by_text(serial, ["Siguiente", "Next"])
             if not click_ok:
                 self.acc_log("No se vio Siguiente, toque ciego de respaldo...")
                 self.adb.run_command(["shell", "input", "tap", "540", "850"], serial)
             
-            self.acc_log(f"Esperando {20 if is_slow else 8}s a que cargue la pantalla de contraseña...")
-            s_sleep(8.0)
+            self.acc_log("Esperando 8s a que cargue la pantalla de contraseña...")
+            time.sleep(8.0)
             
             self.acc_log("Ingresando contraseña...")
             self.adb.run_command(["shell", "input", "tap", "540", "500"], serial)
-            s_sleep(0.5)
+            time.sleep(0.5)
             self.adb.run_command(["shell", "input", "text", pwd], serial)
-            s_sleep(1.0)
+            time.sleep(1.0)
             
             self.acc_log("Avanzando (Siguiente)...")
             self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # Enter
-            s_sleep(1.0)
+            time.sleep(1.0)
             click_ok2 = self.find_and_click_by_text(serial, ["Siguiente", "Next"])
             if not click_ok2:
                 self.adb.run_command(["shell", "input", "tap", "540", "850"], serial)
-            time.sleep(4.0)
+            time.sleep(3.0)
             
-            # --- FASE AUTOMÁTICA EXTRA: FECHA, GÉNERO Y NOMBRE ---
+            self.acc_log("✅ Proceso automático finalizado.")
+            self.acc_log("👀 Listo en pantalla de Fecha. ¡Termina manual!", "success")
             
-            self.acc_log("Buscando rueda del Año (Dinámico)...")
-            import xml.etree.ElementTree as ET
-            import re
-            import os
-            self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
-            local_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"dump_{serial}.xml")
-            self.adb.run_command(["pull", "/sdcard/window_dump.xml", local_path], serial)
-            try:
-                tree = ET.parse(local_path)
-                root = tree.getroot()
-                if os.path.exists(local_path): os.remove(local_path)
-                cx, cy = None, None
-                for node in root.iter():
-                    text = node.get("text", "")
-                    if re.search(r"201[0-9]|202[0-9]", text):
-                        bounds = node.get("bounds", "")
-                        m = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", bounds)
-                        if m:
-                            x1, y1, x2, y2 = map(int, m.groups())
-                            cx = int((x1 + x2) / 2)
-                            cy = int((y1 + y2) / 2)
-                            break
-                if cx:
-                    # Tocamos ligeramente por debajo del primer año encontrado para acertar en la zona verde central
-                    self.adb.run_command(["shell", "input", "tap", str(cx), str(cy + 80)], serial)
-                else:
-                    self.adb.run_command(["shell", "input", "tap", "850", "850"], serial)
-            except:
-                self.adb.run_command(["shell", "input", "tap", "850", "850"], serial)
-                
-            s_sleep(1.0)
-            
-            import random
-            random_year = random.randint(1966, 2008)
-            self.acc_log(f"Escribiendo año final aleatorio ({random_year})...")
-            self.adb.run_command(["shell", "input", "text", str(random_year)], serial)
-            time.sleep(random.uniform(1.0, 2.5))
-            
-            self.acc_log("Pulsando chulito (Enter) para ocultar teclado...")
-            self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # Enter / Done para ocultar teclado
-            s_sleep(1.5)
-            
-            self.acc_log("Avanzando a Género...")
-            click_ok3 = self.find_and_click_by_text(serial, ["Siguiente", "Next"])
-            if not click_ok3:
-                self.adb.run_command(["shell", "input", "tap", "540", "850"], serial)
-            time.sleep(4.0)
-
-            self.acc_log("Buscando opción de Género (Aleatorio)...")
-            import random
-            genders = [
-                ["Masculino", "Hombre", "Male"],
-                ["Femenino", "Mujer", "Female"],
-                ["No binario", "Non-binary", "Non binary"],
-                ["Otro", "Other"],
-                ["Prefiero no decirlo", "Prefer not to say"]
-            ]
-            selected_gender = random.choice(genders)
-            click_ok4 = self.find_and_click_by_text(serial, selected_gender)
-            if not click_ok4:
-                self.acc_log("Toque ciego para Género...", "warn")
-                self.adb.run_command(["shell", "input", "tap", "540", "500"], serial)
-            
-            self.acc_log("Esperando que cargue la selección...")
-            time.sleep(random.uniform(2.5, 3.5))
-            
-            # A veces hay que dar a Siguiente
-            self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # Ocultar teclado/confirmar
-            s_sleep(1.0)
-            self.find_and_click_by_text(serial, ["Siguiente", "Next"])
-            
-            self.acc_log(f"Esperando {12 if is_slow else 5}s para la pantalla de Nombre...")
-            s_sleep(5.0) # Tiempo de carga largo
-
-            self.acc_log("Omitiendo tipeo de nombre (usando el pre-asignado por Spotify)...")
-            s_sleep(1.0)
-            
-            self.acc_log("Escaneando Checkboxes y Botón en Pantalla...")
-            self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
-            local_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"dump_{serial}.xml")
-            self.adb.run_command(["pull", "/sdcard/window_dump.xml", local_path], serial)
-            import xml.etree.ElementTree as ET
-            import re
-            import os
-            
-            btn_crear_cx = None
-            btn_crear_cy = None
-            try:
-                tree = ET.parse(local_path)
-                root = tree.getroot()
-                if os.path.exists(local_path): os.remove(local_path)
-                checkboxes_marcados = 0
-                
-                for node in root.iter():
-                    text = node.get("text", "")
-                    content_desc = node.get("content-desc", "")
-                    checkable = node.get("checkable", "false")
-                    checked = node.get("checked", "false")
-                    bounds = node.get("bounds", "")
-                    
-                    # 1. Analizar checkboxes
-                    if checkable == "true" and checked == "false":
-                        m = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", bounds)
-                        if m:
-                            x1, y1, x2, y2 = map(int, m.groups())
-                            cx = int((x1 + x2) / 2)
-                            cy = int((y1 + y2) / 2)
-                            self.acc_log(f"Marcando checkbox en X={cx}, Y={cy}...")
-                            self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], serial)
-                            s_sleep(1.0)
-                            checkboxes_marcados += 1
-                            
-                    # 2. Analizar Botón de Crear Cuenta (evitando el título de arriba)
-                    lower_text = text.lower() + " " + content_desc.lower()
-                    if "crear cuenta" in lower_text or "create account" in lower_text:
-                        m = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", bounds)
-                        if m:
-                            _, y1, _, y2 = map(int, m.groups())
-                            cy = int((y1 + y2) / 2)
-                            if cy > 300: # Ignorar el título que está arriba
-                                btn_crear_cx = int((int(m.group(1)) + int(m.group(3))) / 2)
-                                btn_crear_cy = cy
-
-                if checkboxes_marcados > 0:
-                    self.acc_log(f"Se marcaron {checkboxes_marcados} casillas dinámicamente.")
-                else:
-                    self.acc_log("No se detectaron casillas sin marcar.")
-            except Exception as e:
-                self.acc_log(f"Fallo al escanear XML: {e}", "warn")
-            
-            s_sleep(1.0)
-            self.acc_log("Pulsando Crear cuenta...")
-            if btn_crear_cx and btn_crear_cy:
-                self.acc_log(f"Encontrado botón seguro en X={btn_crear_cx}, Y={btn_crear_cy}. Pulsando...")
-                self.adb.run_command(["shell", "input", "tap", str(btn_crear_cx), str(btn_crear_cy)], serial)
-            else:
-                self.acc_log("No se ubicó botón seguro, usando Tap Ciego...")
-                self.adb.run_command(["shell", "input", "tap", "540", "1100"], serial)
-            
-            time.sleep(6.0) # Esperar a ver si cambia a Captcha
-            
-            # Validación Final
-            self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
-            self.adb.run_command(["pull", "/sdcard/window_dump.xml", local_path], serial)
-            try:
-                tree = ET.parse(local_path)
-                root = tree.getroot()
-                if os.path.exists(local_path): os.remove(local_path)
-                pantalla_texto = " ".join([n.get("text", "") for n in root.iter()]).lower()
-                if "como te llamas" in pantalla_texto or "what's your name" in pantalla_texto or "crear cuenta" in pantalla_texto:
-                    self.acc_log("❌ [ERROR] El bot sigue en la pantalla de Nombre. Algo impidió crear la cuenta.", "error")
-                    return False
-                else:
-                    self.acc_log("✅ Proceso automático finalizado. Listo en Captcha.", "success")
-                    return True
-            except:
-                self.acc_log("✅ Proceso automático asume éxito (no se pudo verificar). Listo en Captcha.", "success")
-                return True
-
+            # Scrcpy desactivado a petición del usuario para no saturar la PC al lanzar múltiples
             
             
         except Exception as e:
             self.acc_log(f"Falla en el registro App: {str(e)}", "error")
-            return False
+            
+        self.after(0, lambda: self.btn_signup_acc.configure(state="normal", text="✨ 3. Crear Cuenta en App (A Ciegas)"))
 
     def _spotify_login_thread(self, serial):
         try:
@@ -3447,13 +3266,13 @@ class ProxyFarmApp(ctk.CTk):
             self.acc_log("Forzando orientación vertical...")
             self.adb.run_command(["shell", "settings", "put", "system", "accelerometer_rotation", "0"], serial)
             self.adb.run_command(["shell", "settings", "put", "system", "user_rotation", "0"], serial)
-            s_sleep(1.0)
+            time.sleep(1.0)
             
             # 1. Abrir Spotify
             self.acc_log("Abriendo app de Spotify...")
             self.adb.run_command(["shell", "am", "start", "-n", "com.spotify.music/com.spotify.music.MainActivity"], serial)
-            self.acc_log(f"Esperando {15 if is_slow else 6}s a que cargue la app...")
-            s_sleep(6.0)
+            self.acc_log("Esperando 6s a que cargue la app...")
+            time.sleep(6.0)
             
             # 2. Pulsar botón "Iniciar sesión"
             self.acc_log("Buscando botón 'Iniciar sesión'...")
@@ -3467,28 +3286,28 @@ class ProxyFarmApp(ctk.CTk):
             # Evitar popup de Google Smart Lock tocando la parte superior (logo de Spotify)
             self.acc_log("Descartando posible popup de Smart Lock...")
             self.adb.run_command(["shell", "input", "tap", "540", "150"], serial)
-            s_sleep(1.0)
+            time.sleep(1.0)
             
             # 3. Escribir Correo (se enfoca por defecto)
             self.acc_log("Ingresando correo...")
             self.adb.run_command(["shell", "input", "tap", "540", "500"], serial) # Clic respaldo para enfocar campo usuario
-            s_sleep(0.5)
+            time.sleep(0.5)
             self.adb.run_command(["shell", "input", "text", email], serial)
-            s_sleep(1.0)
+            time.sleep(1.0)
             
             # 4. Ir a Contraseña
             self.acc_log("Ingresando contraseña...")
             self.adb.run_command(["shell", "input", "keyevent", "61"], serial) # Tab
-            s_sleep(0.5)
+            time.sleep(0.5)
             self.adb.run_command(["shell", "input", "text", pwd], serial)
-            s_sleep(1.0)
+            time.sleep(1.0)
             
             # 5. Pulsar Enviar / Login
             self.acc_log("Enviando credenciales de acceso...")
             self.adb.run_command(["shell", "input", "keyevent", "61"], serial) # Tab (enfoca el botón de login)
-            s_sleep(0.5)
+            time.sleep(0.5)
             self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # Enter
-            s_sleep(1.0)
+            time.sleep(1.0)
             
             self.acc_log("✅ Comandos enviados. Si la cuenta es correcta, la pantalla se volverá visible en breve.", "success")
             

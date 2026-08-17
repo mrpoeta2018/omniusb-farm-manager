@@ -2648,22 +2648,28 @@ class ProxyFarmApp(ctk.CTk):
                     
                     # Watchdog: Every 10 mins (approx 10% chance per minute to check app focus)
                     if self.watchdog_enabled.get() and random.randint(1, 10) == 1:
-                        target_pkg = "com.spotify.music" if self.master_mode.get() == "spotify" else "com.google.android.youtube"
-                        if self.master_mode.get() == "youtube":
-                            if "music.youtube" in self.youtube_textbox.get("1.0", "end"):
-                                target_pkg = "com.google.android.apps.youtube.music"
-                        
-                        # Check if target app is in foreground
                         out = self.adb.run_command(["shell", "dumpsys", "window", "windows", "|", "grep", "-E", "'mCurrentFocus|mFocusedApp'"], serial)
-                        if out and target_pkg not in out:
-                            self.log_msg(f"🛡️ Watchdog: {target_pkg} se cerró en {serial[-4:]}. Restaurando...", "warn")
-                            # Trigger re-injection
-                            if self.master_mode.get() == "spotify":
-                                playlists = [p.strip() for p in self.playlist_textbox.get("1.0", "end").strip().split('\n') if p.strip()]
-                                if playlists: self._inject_playlist_to_single(serial, random.choice(playlists))
-                            else:
-                                urls = [p.strip() for p in self.youtube_textbox.get("1.0", "end").strip().split('\n') if p.strip()]
-                                if urls: self._inject_youtube_to_single(serial, random.choice(urls))
+                        if out:
+                            # Valid audio/video packages
+                            valid_pkgs = ["com.spotify.music", "com.google.android.youtube", "com.google.android.apps.youtube.music", 
+                                          "com.pandora.android", "fm.awa.app", "com.audiomack", "com.aspiro.tidal", 
+                                          "com.apple.android.music", "com.amazon.mp3"]
+                            
+                            is_running = any(pkg in out for pkg in valid_pkgs)
+                            
+                            if not is_running:
+                                self.log_msg(f"🛡️ Watchdog: App cerrada en {serial[-4:]}. Restaurando...", "warn")
+                                # Trigger re-injection
+                                if self.master_mode.get() == "spotify":
+                                    playlists = [p.strip() for p in self.playlist_textbox.get("1.0", "end").strip().split('\n') if p.strip()]
+                                    if playlists: self._inject_playlist_to_single(serial, random.choice(playlists))
+                                elif self.master_mode.get() == "youtube":
+                                    urls = [p.strip() for p in self.youtube_textbox.get("1.0", "end").strip().split('\n') if p.strip()]
+                                    if urls: self._inject_youtube_to_single(serial, random.choice(urls))
+                                else:
+                                    # Modo mixto: Inyectar aleatoriamente una playlist de Spotify como fallback de seguridad
+                                    playlists = [p.strip() for p in self.playlist_textbox.get("1.0", "end").strip().split('\n') if p.strip()]
+                                    if playlists: self._inject_playlist_to_single(serial, random.choice(playlists))
 
                     # Ghost Touch: Random volume/scroll (aprox 1 o 2 veces al día por dispositivo)
                     # El loop corre cada 60s (1440 al día). Probabilidad 1/720 da ~2 veces al día.

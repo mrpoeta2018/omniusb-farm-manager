@@ -1567,6 +1567,17 @@ class ProxyFarmApp(ctk.CTk):
         self.repair_btn.pack(pady=5, padx=10, fill="x")
         self.bind_tooltip(self.repair_btn, "Intenta reconectar y estabilizar aquellos dispositivos que tengan falla roja.")
         
+        # Frame para Kick
+        kick_frame = ctk.CTkFrame(frame, fg_color="#1E293B", corner_radius=8)
+        kick_frame.pack(fill="x", padx=10, pady=10)
+
+        ctk.CTkLabel(kick_frame, text="🟩 Kick (URLs o Usuarios)", font=("Arial", 14, "bold"), text_color="#10B981").pack(pady=(10,5))
+        self.kick_textbox = ctk.CTkTextbox(kick_frame, height=120, border_color="#10B981", border_width=1)
+        self.kick_textbox.pack(fill="x", expand=True, padx=10, pady=5)
+        
+        self.kick_auto = ctk.CTkCheckBox(kick_frame, text="🟢 Kick (Live Streams) | Auto-KeepAlive", fg_color="#10B981")
+        self.kick_auto.pack(pady=5, anchor="w", padx=10)
+        
         self.clean_btn = ctk.CTkButton(frame, text="🧹 PANIC: LIMPIEZA TOTAL (40 Disp)", command=self.panic_clean, fg_color="darkred")
         self.clean_btn.pack(pady=20, padx=10, fill="x")
         self.bind_tooltip(self.clean_btn, "Detiene todo, corta el internet y borra el caché de apps en TODOS los celulares.")
@@ -2709,6 +2720,10 @@ class ProxyFarmApp(ctk.CTk):
         kick_frame.pack(fill="x", pady=10)
         self.kick_auto = ctk.BooleanVar(value=True)
         ctk.CTkCheckBox(kick_frame, text="🟩 Kick (Live Streams) | Auto-KeepAlive:", font=("Arial", 12, "bold"), text_color="white", variable=self.kick_auto).pack(anchor="w", padx=10, pady=5)
+        
+        self.kick_interact = ctk.BooleanVar(value=False)
+        ctk.CTkCheckBox(kick_frame, text="🗣️ Interacción Avanzada (Aceptar reglas y Chatear)", font=("Arial", 11), text_color="white", variable=self.kick_interact).pack(anchor="w", padx=10, pady=(0,5))
+        
         self.kick_textbox = ctk.CTkTextbox(kick_frame, height=80)
         self.kick_textbox.pack(padx=10, pady=(0,5), fill="x")
         btn_kick = ctk.CTkButton(kick_frame, text="▶ Inyectar Kick", fg_color="#16A34A", command=self.inject_kick)
@@ -2888,6 +2903,42 @@ class ProxyFarmApp(ctk.CTk):
         threading.Thread(target=_bot, daemon=True).start()
         self.log_msg("✨ Inyectando Instagram con automatización Inteligente...", "info")
 
+    def interact_kick_stream(self, s):
+        self.log_msg(f"Buscando reglas de chat en {s}...", "info")
+        import random
+        # Buscar botones de aceptar reglas
+        click_rules = self.find_and_click_by_text(s, ["accept", "aceptar", "start chatting", "agree", "entendido"])
+        if not click_rules:
+            # Fallback a toque en el medio de la pantalla inferior
+            self.adb.run_command(["shell", "input", "tap", "360", "1100"], s)
+        time.sleep(2)
+        
+        # Ocasionalmente comentar
+        if getattr(self, 'kick_interact', None) and self.kick_interact.get():
+            if random.random() < 0.4: # 40% de probabilidad
+                self.log_msg(f"💬 Escribiendo en chat de Kick en {s}...", "info")
+                # Tocar la caja de texto (suele estar en la parte inferior [100, 1250])
+                click_chat = self.find_and_click_by_text(s, ["send a message", "enviar mensaje", "chat"])
+                if not click_chat:
+                    self.adb.run_command(["shell", "input", "tap", "200", "1250"], s)
+                time.sleep(2)
+                
+                comments = ["W", "Let's go", "🔥", "💯", "yooo", "epic", "sheesh"]
+                comment = random.choice(comments)
+                
+                # Escribir con teclado
+                for char in comment:
+                    self.adb.run_command(["shell", "input", "text", char], s)
+                    time.sleep(0.1)
+                time.sleep(1)
+                
+                # Enviar (enter o boton)
+                self.adb.run_command(["shell", "input", "keyevent", "66"], s) # ENTER key
+                time.sleep(1)
+                # Ocultar teclado
+                self.adb.run_command(["shell", "input", "keyevent", "4"], s)
+                self.log_msg(f"✅ Comentario '{comment}' enviado en Kick.", "success")
+
     def inject_kick(self):
         if not hasattr(self, 'engine') or not getattr(self.engine, 'active_devices', []):
             self.log_msg("⚠️ El túnel no está iniciado.", "warn")
@@ -2899,13 +2950,21 @@ class ProxyFarmApp(ctk.CTk):
             for dev in self.engine.active_devices:
                 url = random.choice(urls)
                 s = dev['serial']
+                self.log_msg(f"Abriendo Kick URL en {s}...", "info")
                 self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", f"'{url}'", "com.kick.mobile"], s)
+                time.sleep(10) # Esperar a que cargue el stream
+                
+                # Interacción de Kick (Reglas y Chat)
+                self.interact_kick_stream(s)
+                
                 if self.kick_auto.get():
                     def _keepalive(serial):
                         for _ in range(30):
                             time.sleep(60)
-                            self.adb.run_command(["shell", "input", "tap", "100", "100"], serial)
+                            # Tocar una esquina superior donde no haya botones que pausen
+                            self.adb.run_command(["shell", "input", "tap", "10", "300"], serial)
                     threading.Thread(target=_keepalive, args=(s,), daemon=True).start()
+                    self.log_msg(f"🛡️ Keep-Alive iniciado en {s}", "info")
                 time.sleep(2)
         threading.Thread(target=_bot, daemon=True).start()
         self.log_msg("🟩 Inyectando Kick...", "info")

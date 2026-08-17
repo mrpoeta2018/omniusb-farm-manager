@@ -649,6 +649,7 @@ class ProxyFarmApp(ctk.CTk):
         self.tab_traf = self.tabview.add("📊 Tráfico de Datos en Vivo")
         self.tab_extras = self.tabview.add("🎸 Plataformas Extra")
         self.tab_accounts = self.tabview.add("👤 Creador de Cuentas")
+        self.tab_social = self.tabview.add("📱 Redes y Lives")
         
         self.batch_size_sync_id = None
         self.tips = [
@@ -719,6 +720,7 @@ class ProxyFarmApp(ctk.CTk):
         self.build_traffic_tab()
         self.build_extras_tab()
         self.build_accounts_tab()
+        self.build_social_tab()
 
         self.deiconify()
         print("[+] ¡Interfaz Abierta con Éxito!")
@@ -1910,6 +1912,14 @@ class ProxyFarmApp(ctk.CTk):
                 if hasattr(self, 'apl_textbox') and "apl_playlists" in data:
                     self.apl_textbox.delete("1.0", "end")
                     self.apl_textbox.insert("1.0", data["apl_playlists"].strip() + "\n")
+                if hasattr(self, 'ig_textbox') and "ig_playlists" in data:
+                    self.ig_textbox.delete("1.0", "end")
+                    self.ig_textbox.insert("1.0", data["ig_playlists"].strip() + "\n")
+                if hasattr(self, 'kick_textbox') and "kick_playlists" in data:
+                    self.kick_textbox.delete("1.0", "end")
+                    self.kick_textbox.insert("1.0", data["kick_playlists"].strip() + "\n")
+                if hasattr(self, 'ig_auto') and "ig_auto" in data: self.ig_auto.set(data["ig_auto"])
+                if hasattr(self, 'kick_auto') and "kick_auto" in data: self.kick_auto.set(data["kick_auto"])
                 if hasattr(self, 'use_spotify') and "use_spotify" in data: self.use_spotify.set(data["use_spotify"])
                 if hasattr(self, 'use_ytmusic') and "use_ytmusic" in data: self.use_ytmusic.set(data["use_ytmusic"])
                 if hasattr(self, 'use_ytvideo') and "use_ytvideo" in data: self.use_ytvideo.set(data["use_ytvideo"])
@@ -1951,6 +1961,10 @@ class ProxyFarmApp(ctk.CTk):
                 "pan_playlists": self.pan_textbox.get("1.0", "end").strip() if hasattr(self, 'pan_textbox') else "",
                 "am_playlists": self.am_textbox.get("1.0", "end").strip() if hasattr(self, 'am_textbox') else "",
                 "apl_playlists": self.apl_textbox.get("1.0", "end").strip() if hasattr(self, 'apl_textbox') else "",
+                "ig_playlists": self.ig_textbox.get("1.0", "end").strip() if hasattr(self, 'ig_textbox') else "",
+                "kick_playlists": self.kick_textbox.get("1.0", "end").strip() if hasattr(self, 'kick_textbox') else "",
+                "ig_auto": self.ig_auto.get() if hasattr(self, 'ig_auto') else True,
+                "kick_auto": self.kick_auto.get() if hasattr(self, 'kick_auto') else True,
                 "youtube_drip": self.youtube_drip_var.get(),
                 "watchdog_enabled": self.watchdog_enabled.get(),
                 "ghost_enabled": self.ghost_enabled.get(),
@@ -2667,6 +2681,83 @@ class ProxyFarmApp(ctk.CTk):
             except Exception as e:
                 pass
 
+
+    def build_social_tab(self):
+        self.tab_social.grid_columnconfigure(0, weight=1)
+        
+        main_frame = ctk.CTkFrame(self.tab_social, fg_color="transparent")
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # INSTAGRAM
+        ig_frame = ctk.CTkFrame(main_frame, fg_color="#831843", corner_radius=8)
+        ig_frame.pack(fill="x", pady=10)
+        self.ig_auto = ctk.BooleanVar(value=True)
+        ctk.CTkCheckBox(ig_frame, text="✨ Instagram (Posts/Reels) | Auto-Like y Swipe:", font=("Arial", 12, "bold"), text_color="white", variable=self.ig_auto).pack(anchor="w", padx=10, pady=5)
+        self.ig_textbox = ctk.CTkTextbox(ig_frame, height=80)
+        self.ig_textbox.pack(padx=10, pady=(0,5), fill="x")
+        btn_ig = ctk.CTkButton(ig_frame, text="▶ Inyectar Instagram", fg_color="#BE185D", command=self.inject_ig)
+        btn_ig.pack(side="right", padx=10, pady=10)
+        
+        # KICK
+        kick_frame = ctk.CTkFrame(main_frame, fg_color="#14532D", corner_radius=8)
+        kick_frame.pack(fill="x", pady=10)
+        self.kick_auto = ctk.BooleanVar(value=True)
+        ctk.CTkCheckBox(kick_frame, text="🟩 Kick (Live Streams) | Auto-KeepAlive:", font=("Arial", 12, "bold"), text_color="white", variable=self.kick_auto).pack(anchor="w", padx=10, pady=5)
+        self.kick_textbox = ctk.CTkTextbox(kick_frame, height=80)
+        self.kick_textbox.pack(padx=10, pady=(0,5), fill="x")
+        btn_kick = ctk.CTkButton(kick_frame, text="▶ Inyectar Kick", fg_color="#16A34A", command=self.inject_kick)
+        btn_kick.pack(side="right", padx=10, pady=10)
+        
+        ctk.CTkButton(self.tab_social, text="💾 Guardar Cambios", fg_color="#10B981", command=self.save_config).pack(pady=10)
+
+    def inject_ig(self):
+        if not hasattr(self, 'engine') or not getattr(self.engine, 'active_devices', []):
+            self.log_msg("⚠️ El túnel no está iniciado.", "warn")
+            return
+        urls = [u.strip() for u in self.ig_textbox.get("1.0", "end").strip().split('\n') if u.strip()]
+        if not urls: return
+        import random
+        def _bot():
+            for dev in self.engine.active_devices:
+                url = random.choice(urls)
+                s = dev['serial']
+                self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", f"'{url}'", "com.instagram.android"], s)
+                if self.ig_auto.get():
+                    time.sleep(8)
+                    # Double tap center for Like
+                    self.adb.run_command(["shell", "input", "tap", "500", "1000"], s)
+                    time.sleep(0.5)
+                    self.adb.run_command(["shell", "input", "tap", "500", "1000"], s)
+                    time.sleep(4)
+                    # Swipe up
+                    self.adb.run_command(["shell", "input", "swipe", "500", "1500", "500", "300", "400"], s)
+                time.sleep(2)
+        threading.Thread(target=_bot, daemon=True).start()
+        self.log_msg("✨ Inyectando Instagram...", "info")
+
+    def inject_kick(self):
+        if not hasattr(self, 'engine') or not getattr(self.engine, 'active_devices', []):
+            self.log_msg("⚠️ El túnel no está iniciado.", "warn")
+            return
+        urls = [u.strip() for u in self.kick_textbox.get("1.0", "end").strip().split('\n') if u.strip()]
+        if not urls: return
+        import random
+        def _bot():
+            for dev in self.engine.active_devices:
+                url = random.choice(urls)
+                s = dev['serial']
+                self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", f"'{url}'", "com.kick.mobile"], s)
+                if self.kick_auto.get():
+                    def _keepalive(serial):
+                        for _ in range(30):
+                            time.sleep(60)
+                            self.adb.run_command(["shell", "input", "tap", "100", "100"], serial)
+                    threading.Thread(target=_keepalive, args=(s,), daemon=True).start()
+                time.sleep(2)
+        threading.Thread(target=_bot, daemon=True).start()
+        self.log_msg("🟩 Inyectando Kick...", "info")
+
+
     def build_accounts_tab(self):
         self.tab_accounts.grid_columnconfigure(0, weight=1)
         self.tab_accounts.grid_columnconfigure(1, weight=1)
@@ -2724,6 +2815,12 @@ class ProxyFarmApp(ctk.CTk):
         self.acc_password_entry.pack(pady=2)
         self.acc_password_entry.insert(0, "Androide10")
 
+        # Artistas a seguir
+        ctk.CTkLabel(left_frame, text="🎸 Artistas a seguir (separados por coma):", font=("Arial", 11)).pack(pady=(10, 2))
+        self.acc_artists_entry = ctk.CTkTextbox(left_frame, width=250, height=60)
+        self.acc_artists_entry.pack(pady=2)
+        self.acc_artists_entry.insert("1.0", "Bad Bunny, Feid, Karol G, Drake")
+
         # Botones de Acción
         ctk.CTkLabel(left_frame, text="⚡ Controles de Automatización", font=("Arial", 12, "bold")).pack(pady=(15, 5))
         
@@ -2734,6 +2831,11 @@ class ProxyFarmApp(ctk.CTk):
         self.btn_login_acc.pack(pady=5, fill="x", padx=30)
         self.btn_signup_acc = ctk.CTkButton(left_frame, text="✨ 3. Crear Cuenta en App (A Ciegas)", fg_color="#D946EF", hover_color="#C026D3", command=self.start_spotify_app_signup, height=35)
         self.btn_signup_acc.pack(pady=5, fill="x", padx=30)
+        self.btn_follow_artists = ctk.CTkButton(left_frame, text="🎨 4. Seguir Artistas (Opcional)", fg_color="#EC4899", hover_color="#DB2777", command=self.start_spotify_follow_artists, height=35)
+        self.btn_follow_artists.pack(pady=5, fill="x", padx=30)
+        self.btn_stop_signup = ctk.CTkButton(left_frame, text="🛑 Detener Proceso", fg_color="#EF4444", hover_color="#DC2626", command=self.stop_spotify_signup, height=35, state="disabled")
+        self.btn_stop_signup.pack(pady=5, fill="x", padx=30)
+        self.stop_signup = False
 
         
         # Redundancias por si falla uiautomator
@@ -2907,28 +3009,166 @@ class ProxyFarmApp(ctk.CTk):
         threading.Thread(target=self._spotify_login_thread, args=(serial,), daemon=True).start()
 
 
+    def stop_spotify_signup(self):
+        self.stop_signup = True
+        self.acc_log("🛑 Detención solicitada. Terminando dispositivo actual...", "warn")
+
     def start_spotify_app_signup(self):
         selected = [s for s, v in self.acc_device_vars.items() if v.get()]
         if not selected:
             self.acc_log("Selecciona al menos un celular", "warn")
             return
             
-        self.btn_signup_acc.configure(state="disabled", text="⏳ Iniciando Registros...")
-        import threading
-        import random
-        import time
+        self.btn_signup_acc.configure(state="disabled", text="⏳ Procesando Cola...")
+        if hasattr(self, 'btn_stop_signup'):
+            self.btn_stop_signup.configure(state="normal")
+        self.stop_signup = False
         
         prefix = self.acc_email_prefix_entry.get().strip()
         domain = self.acc_email_domain_entry.get().strip()
         pwd = self.acc_password_entry.get().strip()
+        artists = self.acc_artists_entry.get("1.0", "end-1c").strip()
         
-        for serial in selected:
-            rnd_num = random.randint(10000, 99999)
-            email = f"{prefix}{rnd_num}@{domain}"
-            threading.Thread(target=self._spotify_app_signup_thread, args=(serial, email, pwd), daemon=True).start()
-            time.sleep(4) # Retraso para no saturar ADB
+        import threading
+        threading.Thread(target=self._master_signup_thread, args=(selected, prefix, domain, pwd, artists), daemon=True).start()
 
-    def _spotify_app_signup_thread(self, serial, email, pwd):
+    def _master_signup_thread(self, selected, prefix, domain, pwd, artists):
+        import time
+        import random
+        total_devices = len(selected)
+        success_count = 0
+        failed_count = 0
+        
+        self.acc_log(f"=== INICIANDO COLA SECUENCIAL ({total_devices} Dispositivos) ===")
+        
+        for idx, serial in enumerate(selected):
+            if getattr(self, 'stop_signup', False):
+                self.acc_log("⛔ Proceso cancelado por el usuario.", "error")
+                break
+                
+            self.acc_log(f"--- [Dispositivo {idx+1}/{total_devices}] {serial} ---", "info")
+            max_retries = 2
+            success = False
+            for attempt in range(1, max_retries + 1):
+                if getattr(self, 'stop_signup', False):
+                    break
+                    
+                self.acc_log(f"Intento {attempt}/{max_retries} para {serial}")
+                rnd_num = random.randint(10000, 99999)
+                email = f"{prefix}{rnd_num}@{domain}"
+                
+                self.adb.run_command(["shell", "am", "force-stop", "com.spotify.music"], serial)
+                time.sleep(2)
+                
+                try:
+                    res = self._spotify_app_signup_thread(serial, email, pwd, artists)
+                    if res:
+                        success = True
+                        break
+                    else:
+                        self.acc_log(f"Fallo en intento {attempt} para {serial}", "warn")
+                except Exception as e:
+                    self.acc_log(f"Error en {serial}: {e}", "error")
+                    
+                time.sleep(3)
+                
+            if success:
+                success_count += 1
+            else:
+                failed_count += 1
+                self.acc_log(f"❌ {serial} saltado tras {max_retries} intentos.", "error")
+                
+            time.sleep(3)
+            
+        self.acc_log("=== REPORTE FINAL ===")
+        self.acc_log(f"Procesados: {total_devices}")
+        self.acc_log(f"Exitosos: {success_count}", "success")
+        self.acc_log(f"Fallidos: {failed_count}", "error")
+        
+        self.after(0, lambda: self.btn_signup_acc.configure(state="normal", text="✨ 3. Crear Cuenta en App (A Ciegas)"))
+        if hasattr(self, 'btn_stop_signup'):
+            self.after(0, lambda: self.btn_stop_signup.configure(state="disabled"))
+
+    def start_spotify_follow_artists(self):
+        selected = [s for s, v in self.acc_device_vars.items() if v.get()]
+        if not selected:
+            self.acc_log("Selecciona al menos un celular", "warn")
+            return
+            
+        artists = self.acc_artists_entry.get("1.0", "end-1c").strip()
+        if not artists:
+            self.acc_log("Por favor, ingresa al menos un artista en la caja de texto.", "warn")
+            return
+            
+        self.btn_follow_artists.configure(state="disabled", text="⏳ Siguiendo Artistas...")
+        if hasattr(self, 'btn_stop_signup'):
+            self.btn_stop_signup.configure(state="normal")
+        self.stop_signup = False
+        
+        import threading
+        threading.Thread(target=self._master_artists_thread, args=(selected, artists), daemon=True).start()
+
+    def _master_artists_thread(self, selected, artists):
+        import time
+        total_devices = len(selected)
+        success_count = 0
+        
+        self.acc_log(f"=== INICIANDO SEGUIMIENTO DE ARTISTAS ({total_devices} Dispositivos) ===")
+        
+        for idx, serial in enumerate(selected):
+            if getattr(self, 'stop_signup', False):
+                self.acc_log("⛔ Proceso cancelado por el usuario.", "error")
+                break
+                
+            self.acc_log(f"--- [Dispositivo {idx+1}/{total_devices}] {serial} ---", "info")
+            try:
+                res = self._spotify_follow_artists_thread(serial, artists)
+                if res:
+                    success_count += 1
+            except Exception as e:
+                self.acc_log(f"Error crítico en {serial}: {e}", "error")
+                
+            time.sleep(2)
+            
+        self.acc_log("=== REPORTE ARTISTAS ===")
+        self.acc_log(f"Procesados: {total_devices}")
+        self.acc_log(f"Exitosos: {success_count}", "success")
+        
+        self.after(0, lambda: self.btn_follow_artists.configure(state="normal", text="🎨 4. Seguir Artistas (Opcional)"))
+        if hasattr(self, 'btn_stop_signup'):
+            self.after(0, lambda: self.btn_stop_signup.configure(state="disabled"))
+
+    def _spotify_follow_artists_thread(self, serial, artists):
+        import time
+        import os
+        artist_list = [a.strip() for a in artists.split(",") if a.strip()]
+        self.acc_log(f"Procediendo a seguir a {len(artist_list)} artistas...")
+        for art in artist_list:
+            if getattr(self, 'stop_signup', False): return False
+            self.acc_log(f"Buscando a: {art}")
+            
+            search_clicked = self.find_and_click_by_text(serial, ["Busca artistas", "Search artists", "Buscar"])
+            if not search_clicked:
+                self.adb.run_command(["shell", "input", "tap", "360", "200"], serial)
+            time.sleep(1)
+            
+            self.adb.run_command(["shell", "input", "text", f'"{art}"'], serial)
+            time.sleep(2.5)
+            
+            self.adb.run_command(["shell", "input", "tap", "360", "350"], serial) # Tap 1st result
+            time.sleep(1)
+            
+            self.adb.run_command(["shell", "input", "tap", "650", "200"], serial) # X to clear
+            time.sleep(1)
+            
+        self.acc_log("Artistas seleccionados. Pulsando Listo/Siguiente...")
+        self.find_and_click_by_text(serial, ["Listo", "Siguiente", "Next", "Done"])
+        time.sleep(2)
+        self.acc_log(f"✅ Artistas seguidos en {serial}.", "success")
+        return True
+
+
+    def _spotify_app_signup_thread(self, serial, email, pwd, artists=""):
         import time
         try:
             
@@ -2945,6 +3185,24 @@ class ProxyFarmApp(ctk.CTk):
             self.adb.run_command(["shell", "am", "start", "-n", "com.spotify.music/com.spotify.music.MainActivity"], serial)
             self.acc_log("Esperando 6s a que cargue la app...")
             time.sleep(6.0)
+            
+            self.acc_log("Verificando si ya hay una sesión iniciada...")
+            local_path_check = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"dump_check_{serial}.xml")
+            self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
+            self.adb.run_command(["pull", "/sdcard/window_dump.xml", local_path_check], serial)
+            try:
+                import xml.etree.ElementTree as ET
+                tree = ET.parse(local_path_check)
+                root = tree.getroot()
+                if os.path.exists(local_path_check): os.remove(local_path_check)
+                p_text = " ".join([n.get("text", "") for n in root.iter()]).lower()
+                p_desc = " ".join([n.get("content-desc", "") for n in root.iter()]).lower()
+                full_text = p_text + " " + p_desc
+                if "inicio" in full_text or "tu biblioteca" in full_text or "home" in full_text or "your library" in full_text:
+                    self.acc_log("❌ ¡Alto! La app ya tiene una cuenta iniciada. Abortando registro.", "error")
+                    return False
+            except:
+                pass
             
             self.acc_log("Buscando botón 'Registrarte gratis'...")
             click_ok = self.find_and_click_by_text(serial, ["Registrarte gratis", "Sign up free", "Registrarse", "Sign up"])
@@ -2983,18 +3241,174 @@ class ProxyFarmApp(ctk.CTk):
             click_ok2 = self.find_and_click_by_text(serial, ["Siguiente", "Next"])
             if not click_ok2:
                 self.adb.run_command(["shell", "input", "tap", "540", "850"], serial)
-            time.sleep(3.0)
+            time.sleep(4.0)
             
-            self.acc_log("✅ Proceso automático finalizado.")
-            self.acc_log("👀 Listo en pantalla de Fecha. ¡Termina manual!", "success")
+            # --- FASE AUTOMÁTICA EXTRA: FECHA, GÉNERO Y NOMBRE ---
             
-            # Scrcpy desactivado a petición del usuario para no saturar la PC al lanzar múltiples
+            self.acc_log("Buscando rueda del Año (Dinámico)...")
+            import xml.etree.ElementTree as ET
+            import re
+            import os
+            self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
+            local_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"dump_{serial}.xml")
+            self.adb.run_command(["pull", "/sdcard/window_dump.xml", local_path], serial)
+            try:
+                tree = ET.parse(local_path)
+                root = tree.getroot()
+                if os.path.exists(local_path): os.remove(local_path)
+                cx, cy = None, None
+                for node in root.iter():
+                    text = node.get("text", "")
+                    if re.search(r"201[0-9]|202[0-9]", text):
+                        bounds = node.get("bounds", "")
+                        m = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", bounds)
+                        if m:
+                            x1, y1, x2, y2 = map(int, m.groups())
+                            cx = int((x1 + x2) / 2)
+                            cy = int((y1 + y2) / 2)
+                            break
+                if cx:
+                    # Tocamos ligeramente por debajo del primer año encontrado para acertar en la zona verde central
+                    self.adb.run_command(["shell", "input", "tap", str(cx), str(cy + 80)], serial)
+                else:
+                    self.adb.run_command(["shell", "input", "tap", "850", "850"], serial)
+            except:
+                self.adb.run_command(["shell", "input", "tap", "850", "850"], serial)
+                
+            time.sleep(1.0)
+            
+            import random
+            random_year = random.randint(1966, 2008)
+            self.acc_log(f"Escribiendo año final aleatorio ({random_year})...")
+            self.adb.run_command(["shell", "input", "text", str(random_year)], serial)
+            time.sleep(random.uniform(1.0, 2.5))
+            
+            self.acc_log("Pulsando chulito (Enter) para ocultar teclado...")
+            self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # Enter / Done para ocultar teclado
+            time.sleep(1.5)
+            
+            self.acc_log("Avanzando a Género...")
+            click_ok3 = self.find_and_click_by_text(serial, ["Siguiente", "Next"])
+            if not click_ok3:
+                self.adb.run_command(["shell", "input", "tap", "540", "850"], serial)
+            time.sleep(4.0)
+
+            self.acc_log("Buscando opción de Género (Aleatorio)...")
+            import random
+            genders = [
+                ["Masculino", "Hombre", "Male"],
+                ["Femenino", "Mujer", "Female"],
+                ["No binario", "Non-binary", "Non binary"],
+                ["Otro", "Other"],
+                ["Prefiero no decirlo", "Prefer not to say"]
+            ]
+            selected_gender = random.choice(genders)
+            click_ok4 = self.find_and_click_by_text(serial, selected_gender)
+            if not click_ok4:
+                self.acc_log("Toque ciego para Género...", "warn")
+                self.adb.run_command(["shell", "input", "tap", "540", "500"], serial)
+            
+            self.acc_log("Esperando que cargue la selección...")
+            time.sleep(random.uniform(2.5, 3.5))
+            
+            # A veces hay que dar a Siguiente
+            self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # Ocultar teclado/confirmar
+            time.sleep(1.0)
+            self.find_and_click_by_text(serial, ["Siguiente", "Next"])
+            
+            self.acc_log("Esperando 5s para la pantalla de Nombre...")
+            time.sleep(5.0) # Tiempo de carga largo
+
+            self.acc_log("Omitiendo tipeo de nombre (usando el pre-asignado por Spotify)...")
+            time.sleep(1.0)
+            
+            self.acc_log("Escaneando Checkboxes y Botón en Pantalla...")
+            self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
+            local_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"dump_{serial}.xml")
+            self.adb.run_command(["pull", "/sdcard/window_dump.xml", local_path], serial)
+            import xml.etree.ElementTree as ET
+            import re
+            import os
+            
+            btn_crear_cx = None
+            btn_crear_cy = None
+            try:
+                tree = ET.parse(local_path)
+                root = tree.getroot()
+                if os.path.exists(local_path): os.remove(local_path)
+                checkboxes_marcados = 0
+                
+                for node in root.iter():
+                    text = node.get("text", "")
+                    content_desc = node.get("content-desc", "")
+                    checkable = node.get("checkable", "false")
+                    checked = node.get("checked", "false")
+                    bounds = node.get("bounds", "")
+                    
+                    # 1. Analizar checkboxes
+                    if checkable == "true" and checked == "false":
+                        m = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", bounds)
+                        if m:
+                            x1, y1, x2, y2 = map(int, m.groups())
+                            cx = int((x1 + x2) / 2)
+                            cy = int((y1 + y2) / 2)
+                            self.acc_log(f"Marcando checkbox en X={cx}, Y={cy}...")
+                            self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], serial)
+                            time.sleep(1.0)
+                            checkboxes_marcados += 1
+                            
+                    # 2. Analizar Botón de Crear Cuenta (evitando el título de arriba)
+                    lower_text = text.lower() + " " + content_desc.lower()
+                    if "crear cuenta" in lower_text or "create account" in lower_text:
+                        m = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", bounds)
+                        if m:
+                            _, y1, _, y2 = map(int, m.groups())
+                            cy = int((y1 + y2) / 2)
+                            if cy > 300: # Ignorar el título que está arriba
+                                btn_crear_cx = int((int(m.group(1)) + int(m.group(3))) / 2)
+                                btn_crear_cy = cy
+
+                if checkboxes_marcados > 0:
+                    self.acc_log(f"Se marcaron {checkboxes_marcados} casillas dinámicamente.")
+                else:
+                    self.acc_log("No se detectaron casillas sin marcar.")
+            except Exception as e:
+                self.acc_log(f"Fallo al escanear XML: {e}", "warn")
+            
+            time.sleep(1.0)
+            self.acc_log("Pulsando Crear cuenta...")
+            if btn_crear_cx and btn_crear_cy:
+                self.acc_log(f"Encontrado botón seguro en X={btn_crear_cx}, Y={btn_crear_cy}. Pulsando...")
+                self.adb.run_command(["shell", "input", "tap", str(btn_crear_cx), str(btn_crear_cy)], serial)
+            else:
+                self.acc_log("No se ubicó botón seguro, usando Tap Ciego...")
+                self.adb.run_command(["shell", "input", "tap", "540", "1100"], serial)
+            
+            time.sleep(6.0) # Esperar a ver si cambia a Captcha
+            
+            # Validación Final
+            self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
+            self.adb.run_command(["pull", "/sdcard/window_dump.xml", local_path], serial)
+            try:
+                tree = ET.parse(local_path)
+                root = tree.getroot()
+                if os.path.exists(local_path): os.remove(local_path)
+                pantalla_texto = " ".join([n.get("text", "") for n in root.iter()]).lower()
+                if "como te llamas" in pantalla_texto or "what's your name" in pantalla_texto or "crear cuenta" in pantalla_texto:
+                    self.acc_log("❌ [ERROR] El bot sigue en la pantalla de Nombre. Algo impidió crear la cuenta.", "error")
+                    return False
+                else:
+                    self.acc_log("✅ Proceso automático finalizado. Listo en Captcha.", "success")
+                    return True
+            except:
+                self.acc_log("✅ Proceso automático asume éxito (no se pudo verificar). Listo en Captcha.", "success")
+                return True
+
             
             
         except Exception as e:
             self.acc_log(f"Falla en el registro App: {str(e)}", "error")
-            
-        self.after(0, lambda: self.btn_signup_acc.configure(state="normal", text="✨ 3. Crear Cuenta en App (A Ciegas)"))
+            return False
 
     def _spotify_login_thread(self, serial):
         try:

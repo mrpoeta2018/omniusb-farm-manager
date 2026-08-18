@@ -1214,16 +1214,22 @@ class ProxyFarmApp(ctk.CTk):
         else:
             self.log_msg("⚠️ El túnel no está iniciado.", "warn")
 
+    def _cleanup_background_apps(self, serial, exclude_pkg=None):
+        pkgs = ["com.android.chrome", "com.spotify.music", "com.google.android.youtube", "com.google.android.apps.youtube.music", 
+                "com.pandora.android", "fm.awa.app", "com.audiomack", "com.aspiro.tidal", "com.apple.android.music", "com.amazon.mp3"]
+        for pkg in pkgs:
+            if pkg != exclude_pkg:
+                self.adb.run_command(["shell", "am", "force-stop", pkg], serial)
+
     def _inject_playlist_to_single(self, serial, playlist_url):
         self.lock_device(serial, 40)
         
         safe_url = f"'{playlist_url.strip()}'"
         # Despertar pantalla
         self.adb.run_command(["shell", "input", "keyevent", "224"], serial)
-        # Apagar YouTube y YT Music por si acaso para evitar conflictos de audio
-        self.adb.run_command(["shell", "am", "force-stop", "com.google.android.youtube"], serial)
-        self.adb.run_command(["shell", "am", "force-stop", "com.google.android.apps.youtube.music"], serial)
-        # Nota: NO hacemos force-stop a Spotify porque destruye el MediaSession y evita que el botón Play/Next funcione.
+        # Apagar TODAS las demas apps (incluyendo Chrome) para evitar que el celular se llene de pestañas y colapse.
+        # Excluimos Spotify para que no pierda la MediaSession.
+        self._cleanup_background_apps(serial, exclude_pkg="com.spotify.music")
         s_sleep(2.0)
         
         # Iniciar Spotify con la URL (forzando que el paquete sea Spotify)
@@ -1331,7 +1337,8 @@ class ProxyFarmApp(ctk.CTk):
         safe_url = f"'{url}'"
         
         self.adb.run_command(["shell", "input", "keyevent", "224"], serial)
-        self.adb.run_command(["shell", "am", "force-stop", package_name], serial)
+        # Limpiar fondo para mantener memoria libre. Excluimos la app destino para inyectar encima limpiamente si ya estaba.
+        self._cleanup_background_apps(serial, exclude_pkg=package_name)
         s_sleep(2.0)
         
         self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", safe_url], serial)
@@ -1402,8 +1409,8 @@ class ProxyFarmApp(ctk.CTk):
         # 4. Wake screen
         self.adb.run_command(["shell", "input", "keyevent", "224"], serial)
         
-        # 5. Force stop the correct app to prevent buffer lock
-        self.adb.run_command(["shell", "am", "force-stop", target_app], serial)
+        # 5. Force stop all background apps to free memory, excluding target
+        self._cleanup_background_apps(serial, exclude_pkg=target_app)
         s_sleep(3.0) # Dar más tiempo a liberar memoria y red
         
         # 6. Launch URL

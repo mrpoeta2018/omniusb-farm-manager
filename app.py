@@ -2872,21 +2872,25 @@ class ProxyFarmApp(ctk.CTk):
                                     playlists = [p.strip() for p in self.playlist_textbox.get("1.0", "end").strip().split('\n') if p.strip()]
                                     if playlists: self._inject_playlist_to_single(serial, random.choice(playlists))
 
-                    # Ghost Touch: Random volume/scroll (aprox 1 o 2 veces al día por dispositivo)
-                    # El loop corre cada 60s (1440 al día). Probabilidad 1/720 da ~2 veces al día.
-                    if self.ghost_enabled.get() and random.randint(1, 720) == 1:
-                        # 50% chance of volume change, 50% chance of swipe
-                        if random.choice([True, False]):
-                            # Bajar volumen 15 veces para asegurar el 0%
+                    # Ghost Touch & Anti-Ads (Aprox 1 vez por hora)
+                    # El loop corre cada 60s. Probabilidad 1/60 da ~1 vez por hora.
+                    if self.ghost_enabled.get() and random.randint(1, 60) == 1:
+                        self.log_msg(f" Toque Fantasma en {serial[-4:]} (Anti-Popups)", "info")
+                        
+                        # 1. Tocar parte superior (X:360, Y:300) para cerrar anuncios Premium
+                        self.adb.run_command(["shell", "input", "tap", "360", "300"], serial)
+                        s_sleep(1)
+                        
+                        # 2. Adelantar cancion para mantener flujo activo
+                        self.adb.run_command(["shell", "input", "keyevent", "87"], serial)
+                        
+                        # 3. Solo un 20% de las veces ajusta el volumen aleatorio para despistar
+                        if random.randint(1, 5) == 1:
                             for _ in range(15):
                                 self.adb.run_command(["shell", "input", "keyevent", "25"], serial)
                             s_sleep(0.5)
-                            # Subir volumen de 2 a 3 veces (~12% a 18% máximo)
                             for _ in range(random.randint(2, 3)):
                                 self.adb.run_command(["shell", "input", "keyevent", "24"], serial)
-                        else:
-                            # Random mini swipe
-                            self.adb.run_command(["shell", "input", "swipe", "500", "1000", "500", "800", "200"], serial)
             except Exception as e:
                 pass
 
@@ -3493,6 +3497,7 @@ class ProxyFarmApp(ctk.CTk):
                 rnd_num = random.randint(10000, 99999)
                 email = f"{prefix}{rnd_num}@{domain}"
                 
+                self._cleanup_background_apps(serial)
                 self.adb.run_command(["shell", "am", "force-stop", "com.spotify.music"], serial)
                 time.sleep(2)
                 

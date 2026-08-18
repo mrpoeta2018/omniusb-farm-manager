@@ -1217,19 +1217,7 @@ class ProxyFarmApp(ctk.CTk):
     def _inject_playlist_to_single(self, serial, playlist_url):
         self.lock_device(serial, 40)
         
-        if "?si=" in playlist_url: playlist_url = playlist_url.split("?si=")[0]
-        
-        # NUEVO: Convertir URL web de Spotify a URI nativo para forzar la apertura de la app (evita que Chrome intercepte)
-        if "open.spotify.com" in playlist_url:
-            import re
-            match = re.search(r'/(playlist|album|track|artist)/([a-zA-Z0-9]+)', playlist_url)
-            if match:
-                type_ = match.group(1)
-                id_ = match.group(2)
-                # Formato secreto que fuerza autoplay en algunos dispositivos: spotify:playlist:ID:play
-                playlist_url = f"spotify:{type_}:{id_}:play"
-                
-        safe_url = f"'{playlist_url}'"
+        safe_url = f"'{playlist_url.strip()}'"
         # Despertar pantalla
         self.adb.run_command(["shell", "input", "keyevent", "224"], serial)
         # Apagar YouTube y YT Music por si acaso para evitar conflictos de audio
@@ -1238,8 +1226,8 @@ class ProxyFarmApp(ctk.CTk):
         # Nota: NO hacemos force-stop a Spotify porque destruye el MediaSession y evita que el botón Play/Next funcione.
         s_sleep(2.0)
         
-        # Iniciar Spotify con la URL
-        self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", safe_url], serial)
+        # Iniciar Spotify con la URL (forzando que el paquete sea Spotify)
+        self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", safe_url, "com.spotify.music"], serial)
         
         def delayed_play(s=serial):
             # Aumentar la paciencia a 15 segundos para proxies lentos (carga inicial)

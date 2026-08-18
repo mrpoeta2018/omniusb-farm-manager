@@ -1,6 +1,7 @@
 import sys
 import os
 import time
+s_sleep = time.sleep
 import io
 import random
 
@@ -1085,12 +1086,20 @@ class ProxyFarmApp(ctk.CTk):
             return
             
         if hasattr(self, 'engine') and self.engine.active_devices:
-            self.log_msg("🎧 [MANUAL] Inyectando Playlists de Spotify...", "info")
+            mode = getattr(self, 'spotify_mode_var', None) and self.spotify_mode_var.get() or "Normal"
+            self.log_msg(f"🎧 [MANUAL] Inyectando Playlists (Modo: {mode})...", "info")
             import random
             def _mass_inject():
-                for dev in self.engine.active_devices:
+                for i, dev in enumerate(self.engine.active_devices):
                     rnd_url = random.choice(playlists)
-                    self._inject_playlist_to_single(dev['serial'], rnd_url)
+                    if mode == "Explorar Artistas":
+                        self._explore_spotify_artists(dev['serial'], rnd_url)
+                        self._inject_playlist_to_single(dev['serial'], rnd_url)
+                    elif mode == "Clonar Copia":
+                        if i > 0: time.sleep(45.0)
+                        self._clone_and_play_playlist(dev['serial'], rnd_url)
+                    else:
+                        self._inject_playlist_to_single(dev['serial'], rnd_url)
                     s_sleep(1.5)
             threading.Thread(target=_mass_inject, daemon=True).start()
         else:
@@ -1216,10 +1225,131 @@ class ProxyFarmApp(ctk.CTk):
 
     def _cleanup_background_apps(self, serial, exclude_pkg=None):
         pkgs = ["com.android.chrome", "com.spotify.music", "com.google.android.youtube", "com.google.android.apps.youtube.music", 
-                "com.pandora.android", "fm.awa.app", "com.audiomack", "com.aspiro.tidal", "com.apple.android.music", "com.amazon.mp3"]
+                "com.pandora.android", "fm.awa.app", "com.audiomack", "com.aspiro.tidal", "com.apple.android.music", "com.amazon.mp3",
+                "com.instagram.android", "com.kick.mobile"]
         for pkg in pkgs:
             if pkg != exclude_pkg:
                 self.adb.run_command(["shell", "am", "force-stop", pkg], serial)
+
+    def _clone_and_play_playlist(self, serial, playlist_url):
+        import time
+        self.lock_device(serial, 40)
+        safe_url = f"'{playlist_url.strip()}'"
+        
+        self.adb.run_command(["shell", "input", "keyevent", "224"], serial)
+        self._cleanup_background_apps(serial, exclude_pkg="com.spotify.music")
+        time.sleep(2.0)
+        
+        # 1. Abrir playlist original
+        self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", safe_url, "com.spotify.music"], serial)
+        time.sleep(12) # Esperar que cargue bien
+        
+        # 2. Tap 3 puntos menu
+        self.adb.run_command(["shell", "input", "tap", "360", "898"], serial)
+        time.sleep(4)
+        
+        # 3. Tap Agregar a otra playlist
+        self.adb.run_command(["shell", "input", "tap", "360", "1190"], serial)
+        time.sleep(4)
+        
+        # 4. Tap Nueva playlist
+        self.adb.run_command(["shell", "input", "tap", "600", "208"], serial)
+        time.sleep(4)
+        
+        # 4.5 Escribir nombre aleatorio
+        import random
+        names = ["Mis%sCanciones", "Playlist%sPiola", "Top%sMusic", "Favoritas%s2026", "Mix%sGenial", "Temazos%sHoy", "Musica%sNueva"]
+        name = random.choice(names)
+        self.adb.run_command(["shell", "input", "text", name], serial)
+        time.sleep(2)
+        
+        # Cerrar teclado garantizado (Back o Enter)
+        self.adb.run_command(["shell", "input", "keyevent", "4"], serial)
+        time.sleep(2)
+        
+        # 5. Tap Crear - Intento Principal
+        self.adb.run_command(["shell", "input", "tap", "492", "921"], serial)
+        time.sleep(5)
+        
+        # 5.5 VERIFICACION ROBUSTA (Leer Pantalla / UI Automator)
+        # Si todavia vemos "Crear", usamos lectura de pantalla para dar clic dinamico!
+        try:
+            dump_path = f"/sdcard/dump_clone_{serial}.xml"
+            import subprocess
+            subprocess.run([".\\omniusb-farm-manager\\platform-tools\\adb.exe", "-s", serial, "shell", "uiautomator", "dump", dump_path], capture_output=True)
+            res = subprocess.run([".\\omniusb-farm-manager\\platform-tools\\adb.exe", "-s", serial, "shell", "cat", dump_path], capture_output=True, text=True)
+            xml_data = res.stdout
+            if "Crear" in xml_data and "bounds=" in xml_data:
+                import re
+                m = re.search(r'text="Crear".*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml_data)
+                if m:
+                    x1, y1, x2, y2 = map(int, m.groups())
+                    cx, cy = (x1+x2)//2, (y1+y2)//2
+                    self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], serial)
+                    time.sleep(5)
+        except Exception as e:
+            print("Error en verificacion robusta:", e)
+        
+        time.sleep(10) # Esperar que la cree y cargue la vista de la nueva playlist
+        
+        # 6. Tap Reproducir playlist (Botón verde grande)
+        self.adb.run_command(["shell", "input", "tap", "632", "898"], serial)
+        time.sleep(2)
+        
+        # 7. Tap en la primera cancion (para forzar que inicie ESA lista)
+        self.adb.run_command(["shell", "input", "tap", "360", "1000"], serial)
+        time.sleep(5)
+        
+        # 8. Asegurar Play (keyevent 126 por si acaso)
+        self.adb.run_command(["shell", "input", "keyevent", "126"], serial)
+        
+        # Asegurar repetición de toda la lista (por las dudas)
+        # 1. Abrir reproductor pantalla completa
+        self.adb.run_command(["shell", "input", "tap", "360", "1176"], serial)
+        time.sleep(3)
+        # 2. Tap Repeticion
+        self.adb.run_command(["shell", "input", "tap", "630", "1050"], serial)
+        self.adb.run_command(["shell", "input", "tap", "630", "1050"], serial) # Doble tap para asegurar estado 'Repetir todas'
+        
+        # Volver atras
+        self.adb.run_command(["shell", "input", "keyevent", "4"], serial)
+
+    def _explore_spotify_artists(self, serial, playlist_url):
+        import requests, re, random, time
+        try:
+            headers = {"User-Agent": "Mozilla/5.0"}
+            r = requests.get(playlist_url.strip(), headers=headers, timeout=10)
+            artist_ids = list(set(re.findall(r'href="/artist/([a-zA-Z0-9]+)"', r.text)))
+            if not artist_ids:
+                return
+            
+            # Elegir 2 artistas al azar
+            selected = random.sample(artist_ids, min(2, len(artist_ids)))
+            for a_id in selected:
+                a_url = f"spotify:artist:{a_id}"
+                self._cleanup_background_apps(serial, exclude_pkg="com.spotify.music")
+                self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", f"'{a_url}'", "com.spotify.music"], serial)
+                time.sleep(8)
+                
+                # Tocar el boton verde de Play en el perfil del artista (Resolución 720x1280)
+                self.adb.run_command(["shell", "input", "tap", "636", "664"], serial)
+                time.sleep(5)
+                
+                # Reproducir canciones populares (3 canciones)
+                for i in range(3):
+                    # Escuchar un rato aleatorio entre 60s y 120s
+                    listen_time = random.randint(60, 120)
+                    time.sleep(listen_time)
+                    
+                    # Dar Like tocando el corazon en la barra Now Playing (Resolución 720x1280)
+                    self.adb.run_command(["shell", "input", "tap", "568", "1176"], serial)
+                    
+                    # Saltar a siguiente cancion si no es la ultima
+                    if i < 2:
+                        self.adb.run_command(["shell", "input", "keyevent", "87"], serial)
+                        time.sleep(5)
+        except Exception as e:
+            pass
 
     def _inject_playlist_to_single(self, serial, playlist_url):
         self.lock_device(serial, 40)
@@ -1236,17 +1366,19 @@ class ProxyFarmApp(ctk.CTk):
         self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", safe_url, "com.spotify.music"], serial)
         
         def delayed_play(s=serial):
-            # Aumentar la paciencia a 15 segundos para proxies lentos (carga inicial)
+            # Esperar a que cargue la interfaz
             time.sleep(15)
-            # El comando PLAY (126) ha demostrado ser el 100% efectivo sin necesidad de tocar la pantalla.
-            self.adb.run_command(["shell", "input", "keyevent", "126"], s)
             
-            # Redundancia: segundo intento de Play por si no agarró a la primera
+            self.log_msg(f"📱 [{s}] Dando Play a la lista principal (Modo Normal)...", "info")
+            # Tocar el botón Play Verde de la lista (Mucho más confiable que el keyevent 126 que a veces resume la canción anterior)
+            self.adb.run_command(["shell", "input", "tap", "632", "898"], s)
+            time.sleep(3)
+            
+            # Tocar la primera canción de la lista por seguridad (esto fuerza a que la lista empiece sí o sí)
+            self.adb.run_command(["shell", "input", "tap", "360", "1000"], s)
             time.sleep(5)
-            self.adb.run_command(["shell", "input", "keyevent", "126"], s)
             
-            # NUEVO: Esperar 60 segundos adicionales para saltar cualquier anuncio largo de Spotify
-            # Esto fuerza a que inicie la primera canción real
+            # Esperar 60 segundos adicionales para saltar cualquier anuncio largo de Spotify
             time.sleep(60)
             self.adb.run_command(["shell", "input", "keyevent", "87"], s)
         threading.Thread(target=delayed_play, daemon=True).start()
@@ -1256,9 +1388,31 @@ class ProxyFarmApp(ctk.CTk):
             return
             
         def _mass_inject():
-            for dev in self.engine.active_devices:
-                self._inject_playlist_to_single(dev['serial'], playlist_url)
-                s_sleep(1.5)
+            def worker(dev_serial, delay):
+                time.sleep(delay)
+                # Exploracion profunda opcional ANTES de la lista principal
+                # Lógica del Menú de Modos de Spotify
+                mode = getattr(self, 'spotify_mode_var', None) and self.spotify_mode_var.get() or "Normal"
+                
+                if mode == "Explorar Artistas":
+                    self._explore_spotify_artists(dev_serial, playlist_url)
+                    self._inject_playlist_to_single(dev_serial, playlist_url)
+                elif mode == "Clonar Copia":
+                    self._clone_and_play_playlist(dev_serial, playlist_url)
+                else:
+                    # Normal
+                    self._inject_playlist_to_single(dev_serial, playlist_url)
+                
+            threads = []
+            for i, dev in enumerate(self.engine.active_devices):
+                delay = i * 1.5
+                mode = getattr(self, 'spotify_mode_var', None) and self.spotify_mode_var.get() or "Normal"
+                if mode == "Clonar Copia":
+                    delay = i * 45.0
+                t = threading.Thread(target=worker, args=(dev['serial'], delay), daemon=True)
+                t.start()
+                threads.append(t)
+                
         threading.Thread(target=_mass_inject, daemon=True).start()
 
     def update_playlist_ui(self, *args):
@@ -1650,6 +1804,7 @@ class ProxyFarmApp(ctk.CTk):
         spot_frame = ctk.CTkFrame(url_frame, fg_color="#064E3B", corner_radius=8) # Dark green
         spot_frame.pack(side="left", fill="both", expand=True, padx=(0, 2))
         self.use_spotify = ctk.BooleanVar(value=True)
+        self.spotify_explore_var = ctk.BooleanVar(value=False)
         ctk.CTkCheckBox(spot_frame, text="🟢 Spotify (Listas):", font=("Arial", 11, "bold"), text_color="white", variable=self.use_spotify).pack(anchor="w", padx=10, pady=(5, 0))
         self.playlist_textbox = ctk.CTkTextbox(spot_frame, height=160)
         self.playlist_textbox.pack(padx=5, pady=2, fill="x")
@@ -1658,6 +1813,11 @@ class ProxyFarmApp(ctk.CTk):
         spot_btn_frame.pack(fill="x", padx=5, pady=(0, 5))
         ctk.CTkButton(spot_btn_frame, text="💾", width=30, height=24, fg_color="#F59E0B", command=self.save_config).pack(side="left", padx=(0, 5))
         ctk.CTkButton(spot_btn_frame, text="🗑️", width=30, height=24, fg_color="#4B5563", command=lambda: self.playlist_textbox.delete("1.0", "end")).pack(side="left")
+        
+        # Modo Spotify
+        self.spotify_mode_var = ctk.StringVar(value="Normal")
+        self.spotify_mode_menu = ctk.CTkOptionMenu(spot_btn_frame, values=["Normal", "Explorar Artistas", "Clonar Copia"], variable=self.spotify_mode_var, width=130, height=24, font=("Arial", 11), fg_color="#10B981", button_color="#059669", command=self.on_spotify_mode_change)
+        self.spotify_mode_menu.pack(side="right", padx=(5, 0))
 
         # Caja 2: YT Music
         ytm_frame = ctk.CTkFrame(url_frame, fg_color="#4A044E", corner_radius=8) # Dark purple
@@ -1749,10 +1909,20 @@ class ProxyFarmApp(ctk.CTk):
         self.traf_sort_lbl = ctk.CTkLabel(toolbar, text="Sin ordenar", font=("Arial", 10), text_color="#64748B")
         self.traf_sort_lbl.pack(side="right", padx=10, pady=5)
 
-        self.traf_frame = ctk.CTkScrollableFrame(self.tab_traf)
-        self.traf_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+        # Contenedor inferior dividido
+        split_frame = ctk.CTkFrame(self.tab_traf, fg_color="transparent")
+        split_frame.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+
+        self.traf_frame = ctk.CTkScrollableFrame(split_frame)
+        self.traf_frame.pack(side="left", fill="both", expand=True, padx=(0, 5))
         title = ctk.CTkLabel(self.traf_frame, text="Semáforo de Consumo en Tiempo Real", font=("Arial", 16, "bold"))
         title.pack(pady=10)
+        
+        log_container = ctk.CTkFrame(split_frame, fg_color="#111827", corner_radius=8)
+        log_container.pack(side="right", fill="both", expand=True, padx=(5, 0))
+        ctk.CTkLabel(log_container, text="Log de Operaciones", font=("Arial", 16, "bold"), text_color="#34D399").pack(pady=10)
+        self.log_frame_bottom = ctk.CTkTextbox(log_container, font=("Consolas", 11), text_color="#10B981", fg_color="transparent")
+        self.log_frame_bottom.pack(fill="both", expand=True, padx=5, pady=5)
         self.traf_widgets = {}  # serial -> label widget
         self.traf_data = {}  # serial -> {is_active, rx, tx, ip, text, color}
         self.traf_sort_mode = None  # None, "serial", "connection"
@@ -1834,12 +2004,26 @@ class ProxyFarmApp(ctk.CTk):
             self.mins_entry.configure(state=state)
 
     def log_msg(self, msg, type="info"):
-        self.log_frame.configure(state="normal")
-        sym = "🟢" if type == "info" else "🔴"
-        if type == "warn": sym = "🟡"
-        self.log_frame.insert("end", f"{sym} {msg}\n")
-        self.log_frame.see("end")
-        self.log_frame.configure(state="disabled")
+        def _update():
+            self.log_frame.configure(state="normal")
+            sym = "🟢" if type == "info" else "✅"
+            if type == "warn": sym = "⚠️"
+            full_msg = f"{sym} {msg}\n"
+            self.log_frame.insert("end", full_msg)
+            self.log_frame.see("end")
+            self.log_frame.configure(state="disabled")
+            if hasattr(self, 'log_frame_bottom'):
+                try:
+                    self.log_frame_bottom.configure(state="normal")
+                    self.log_frame_bottom.insert("end", full_msg)
+                    self.log_frame_bottom.see("end")
+                    self.log_frame_bottom.configure(state="disabled")
+                except:
+                    pass
+        if hasattr(self, 'after'):
+            self.after(0, _update)
+        else:
+            _update()
 
     def restart_adb_server(self):
         def _task():
@@ -1874,8 +2058,11 @@ class ProxyFarmApp(ctk.CTk):
                     self.proxy_textbox.delete("1.0", "end")
                     self.proxy_textbox.insert("1.0", data["proxies"].strip() + "\n")
                 if "playlists" in data:
+                    self.spotify_normal_urls = data["playlists"].strip()
                     self.playlist_textbox.delete("1.0", "end")
-                    self.playlist_textbox.insert("1.0", data["playlists"].strip() + "\n")
+                    self.playlist_textbox.insert("1.0", self.spotify_normal_urls + "\n")
+                if "spotify_clone_url" in data:
+                    self.spotify_clone_url = data["spotify_clone_url"].strip()
                 if "master_mode" in data:
                     self.master_mode.set(data["master_mode"])
                 if "playlist_interval" in data:
@@ -1934,6 +2121,24 @@ class ProxyFarmApp(ctk.CTk):
         except:
             pass
 
+    def on_spotify_mode_change(self, new_mode):
+        current_text = self.playlist_textbox.get("1.0", "end").strip()
+        
+        # Guardar lo que estaba
+        if getattr(self, '_last_spotify_mode', 'Normal') == 'Clonar Copia':
+            self.spotify_clone_url = current_text
+        else:
+            self.spotify_normal_urls = current_text
+            
+        self._last_spotify_mode = new_mode
+        
+        # Limpiar y restaurar
+        self.playlist_textbox.delete("1.0", "end")
+        if new_mode == 'Clonar Copia':
+            self.playlist_textbox.insert("1.0", self.spotify_clone_url + "\n")
+        else:
+            self.playlist_textbox.insert("1.0", self.spotify_normal_urls + "\n")
+
     def save_config(self):
         try:
             ytm_text = ""
@@ -1948,7 +2153,8 @@ class ProxyFarmApp(ctk.CTk):
                 "no_proxy": self.no_proxy_var.get(),
                 "bot_only": getattr(self, 'bot_only_var', ctk.BooleanVar(value=False)).get(),
                 "proxies": self.proxy_textbox.get("1.0", "end").strip(),
-                "playlists": self.playlist_textbox.get("1.0", "end").strip(),
+                "playlists": self.spotify_normal_urls if getattr(self, '_last_spotify_mode', 'Normal') == 'Clonar Copia' else self.playlist_textbox.get("1.0", "end").strip(),
+                "spotify_clone_url": self.playlist_textbox.get("1.0", "end").strip() if getattr(self, '_last_spotify_mode', 'Normal') == 'Clonar Copia' else getattr(self, 'spotify_clone_url', ''),
                 "master_mode": self.master_mode.get(),
                 "playlist_interval": self.playlist_interval.get(),
                 "youtube_playlists": self.youtube_textbox.get("1.0", "end").strip(),
@@ -2715,7 +2921,21 @@ class ProxyFarmApp(ctk.CTk):
         btn_kick = ctk.CTkButton(kick_frame, text="▶ Inyectar Kick", fg_color="#16A34A", command=self.inject_kick)
         btn_kick.pack(side="right", padx=10, pady=10)
         
-        ctk.CTkButton(self.tab_social, text="💾 Guardar Cambios", fg_color="#10B981", command=self.save_config).pack(pady=10)
+        bottom_frame = ctk.CTkFrame(self.tab_social, fg_color="transparent")
+        bottom_frame.pack(fill="x", pady=10)
+        
+        ctk.CTkButton(bottom_frame, text="💾 Guardar Cambios", fg_color="#10B981", command=self.save_config).pack(side="left", padx=20)
+        ctk.CTkButton(bottom_frame, text="🛑 Detener Redes", fg_color="#DC2626", hover_color="#991B1B", command=self.stop_social_bots).pack(side="right", padx=20)
+
+    def stop_social_bots(self):
+        self.stop_social_threads = True
+        self.log_msg("🛑 Deteniendo Redes y cerrando apps...", "warn")
+        if hasattr(self, 'engine') and getattr(self.engine, 'active_devices', []):
+            for dev in self.engine.active_devices:
+                s = dev['serial']
+                self.adb.run_command(["shell", "am", "force-stop", "com.instagram.android"], s)
+                self.adb.run_command(["shell", "am", "force-stop", "com.kick.mobile"], s)
+                self.adb.run_command(["shell", "input", "keyevent", "3"], s)
 
     def interact_ig_post(self, s):
         self.log_msg(f"Iniciando interacción avanzada en {s}...", "info")
@@ -2807,6 +3027,7 @@ class ProxyFarmApp(ctk.CTk):
 
 
     def inject_ig(self):
+        self.stop_social_threads = False
         if not hasattr(self, 'engine') or not getattr(self.engine, 'active_devices', []):
             self.log_msg("⚠️ El túnel no está iniciado.", "warn")
             return
@@ -2817,6 +3038,7 @@ class ProxyFarmApp(ctk.CTk):
         
         def _bot():
             for dev in self.engine.active_devices:
+                if getattr(self, "stop_social_threads", False): break
                 url = random.choice(urls)
                 s = dev['serial']
                 
@@ -2831,7 +3053,8 @@ class ProxyFarmApp(ctk.CTk):
                 
                 self.log_msg(f"Abriendo IG: {username} en {s}...")
                 
-                # Cierra IG para refrescarlo
+                # Cierra otras apps y refresca IG
+                self._cleanup_background_apps(s, exclude_pkg="com.instagram.android")
                 self.adb.run_command(["shell", "am", "force-stop", "com.instagram.android"], s)
                 time.sleep(1)
                 
@@ -2925,6 +3148,7 @@ class ProxyFarmApp(ctk.CTk):
                 self.log_msg(f"✅ Comentario '{comment}' enviado en Kick.", "success")
 
     def inject_kick(self):
+        self.stop_social_threads = False
         if not hasattr(self, 'engine') or not getattr(self.engine, 'active_devices', []):
             self.log_msg("⚠️ El túnel no está iniciado.", "warn")
             return
@@ -2933,9 +3157,16 @@ class ProxyFarmApp(ctk.CTk):
         import random
         def _bot():
             for dev in self.engine.active_devices:
+                if getattr(self, "stop_social_threads", False): break
                 url = random.choice(urls)
                 s = dev['serial']
                 self.log_msg(f"Abriendo Kick URL en {s}...", "info")
+                
+                # Cierra otras apps y refresca Kick
+                self._cleanup_background_apps(s, exclude_pkg="com.kick.mobile")
+                self.adb.run_command(["shell", "am", "force-stop", "com.kick.mobile"], s)
+                time.sleep(1)
+                
                 self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", f"'{url}'", "com.kick.mobile"], s)
                 time.sleep(10) # Esperar a que cargue el stream
                 
@@ -2945,7 +3176,9 @@ class ProxyFarmApp(ctk.CTk):
                 if self.kick_auto.get():
                     def _keepalive(serial):
                         for _ in range(30):
-                            time.sleep(60)
+                            for _ in range(60):
+                                if getattr(self, 'stop_social_threads', False): return
+                                time.sleep(1)
                             # Tocar una esquina superior donde no haya botones que pausen
                             self.adb.run_command(["shell", "input", "tap", "10", "300"], serial)
                     threading.Thread(target=_keepalive, args=(s,), daemon=True).start()

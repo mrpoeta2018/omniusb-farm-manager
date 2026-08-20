@@ -1357,7 +1357,8 @@ class ProxyFarmApp(ctk.CTk):
         """Busca y presiona 'Agregar a biblioteca' y luego el botn verde de Play."""
         try:
             self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
-            out = self.adb.run_command(["shell", "cat", "/sdcard/window_dump.xml"], serial)
+            out_tuple = self.adb.run_command(["shell", "cat", "/sdcard/window_dump.xml"], serial)
+            out = out_tuple[0] if isinstance(out_tuple, tuple) else out_tuple
             if not out: return False
             
             import xml.etree.ElementTree as ET

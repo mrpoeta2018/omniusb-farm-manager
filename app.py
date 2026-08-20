@@ -3021,25 +3021,37 @@ class ProxyFarmApp(ctk.CTk):
                                     playlists = [p.strip() for p in self.playlist_textbox.get("1.0", "end").strip().split('\n') if p.strip()]
                                     if playlists: self._inject_playlist_to_single(serial, random.choice(playlists))
 
-                    # Ghost Touch & Anti-Ads (Aprox 1 vez por hora)
-                    # El loop corre cada 60s. Probabilidad 1/60 da ~1 vez por hora.
-                    if self.ghost_enabled.get() and random.randint(1, 60) == 1:
-                        self.log_msg(f" Toque Fantasma en {serial[-4:]} (Anti-Popups)", "info")
+                    # Ghost Touch Inteligente (Aprox cada 15 min)
+                    if self.ghost_enabled.get() and random.randint(1, 15) == 1:
+                        if not getattr(self, '_is_spotify_playing', lambda x: True)(serial):
+                            self.log_msg(f" 👻 Toque Fantasma Inteligente en {serial[-4:]}: Audio Pausado, reanudando...", "warn")
+                            
+                            # 1. Intentar aceptar pop-up de YT Music ("¿Quieres seguir mirándolo?")
+                            root = getattr(self, 'pull_and_parse', lambda x: None)(serial)
+                            if root is not None:
+                                texts = [n.get("text", "").lower() for n in root.iter("node")]
+                                if any("mir" in t or "pausa" in t for t in texts):
+                                    if getattr(self, 'find_and_click_by_text', lambda s, t: False)(serial, ["Sí", "Yes", "Si"]):
+                                        self.log_msg(f" 👆 Popup de 'Seguir mirándolo' aceptado en {serial[-4:]}.", "success")
+                                        time.sleep(1)
+
+                            # 2. Tocar parte superior para cerrar anuncios
+                            self.adb.run_command(["shell", "input", "tap", "360", "300"], serial)
+                            time.sleep(1)
+
+                            # 3. Dar Play (85) y Adelantar (87) para forzar reactivación
+                            self.adb.run_command(["shell", "input", "keyevent", "85"], serial)
+                            time.sleep(1)
+                            self.adb.run_command(["shell", "input", "keyevent", "87"], serial)
                         
-                        # 1. Tocar parte superior (X:360, Y:300) para cerrar anuncios Premium
-                        self.adb.run_command(["shell", "input", "tap", "360", "300"], serial)
-                        s_sleep(1)
-                        
-                        # 2. Adelantar cancion para mantener flujo activo
-                        self.adb.run_command(["shell", "input", "keyevent", "87"], serial)
-                        
-                        # 3. Solo un 20% de las veces ajusta el volumen aleatorio para despistar
-                        if random.randint(1, 5) == 1:
-                            for _ in range(15):
-                                self.adb.run_command(["shell", "input", "keyevent", "25"], serial)
-                            s_sleep(0.5)
-                            for _ in range(random.randint(2, 3)):
-                                self.adb.run_command(["shell", "input", "keyevent", "24"], serial)
+                        else:
+                            # 4. Si YA está sonando bien, solo hacemos un ajuste humano invisible (volumen aleatorio 20% de las veces)
+                            if random.randint(1, 5) == 1:
+                                for _ in range(15):
+                                    self.adb.run_command(["shell", "input", "keyevent", "25"], serial)
+                                time.sleep(0.5)
+                                for _ in range(random.randint(2, 3)):
+                                    self.adb.run_command(["shell", "input", "keyevent", "24"], serial)
             except Exception as e:
                 pass
 

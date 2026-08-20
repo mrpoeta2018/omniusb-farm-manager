@@ -1607,14 +1607,14 @@ class ProxyFarmApp(ctk.CTk):
     def _inject_youtube_to_single(self, serial, url):
         self.lock_device(serial, 40)
         
-        # 1. Limpiar parámetros de rastreo que causan error de "Sin conexión" en la app
+        # 1. Limpiar parmetros de rastreo que causan error de "Sin conexin" en la app
         if "&si=" in url: url = url.split("&si=")[0]
         if "?si=" in url: url = url.split("?si=")[0]
             
         # 2. Forzar Auto-Play y Aleatorio (cambiar playlist por watch)
         if "/playlist?list=" in url:
             url = url.replace("/playlist?list=", "/watch?list=")
-            # Agregar el parámetro secreto de shuffle para YouTube
+            # Agregar el parmetro secreto de shuffle para YouTube
             if "&shuffle=" not in url:
                 url += "&shuffle=1"
                 
@@ -1633,37 +1633,65 @@ class ProxyFarmApp(ctk.CTk):
         # 4. Wake screen
         self.adb.run_command(["shell", "input", "keyevent", "224"], serial)
         
-        # 5. Force stop all background apps to free memory, excluding target
+        # 5. NUEVO: Forzar cierre de la app para evitar que se acumulen 7 pestaas
+        self.adb.run_command(["shell", "am", "force-stop", target_app], serial)
         self._cleanup_background_apps(serial, exclude_pkg=target_app)
-        s_sleep(3.0) # Dar más tiempo a liberar memoria y red
+        import time
+        time.sleep(3.0) # Dar ms tiempo a liberar memoria y red
         
         # 6. Launch URL
+        token = str(time.time())
+        self.injection_tokens[serial] = token
+        
         if is_web_mode:
             # Forzar apertura en Chrome
             self.adb.run_command(["shell", "am", "start", "-n", "com.android.chrome/com.google.android.apps.chrome.Main", "-d", safe_url], serial)
         else:
-            # Usamos SOLO el comando genérico seguro para no asfixiar la app nativa con dobles intents
-            self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", safe_url, "-f", "0x14000000"], serial)
+            # Usamos SOLO el comando genrico seguro para no asfixiar la app nativa con dobles intents
+            self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", safe_url], serial)
         
-        def delayed_youtube_play(s=serial):
-            # Dar 28 segundos para que el proxy cargue toda la interfaz y buffer
-            time.sleep(28)
+        def delayed_youtube_play(s=serial, t=token):
+            def is_cancelled():
+                if getattr(self, "stop_social_threads", False): return True
+                if self.injection_tokens.get(s) != t: return True
+                return False
+
+            # 1. Espera inicial (20 seg)
+            for _ in range(20):
+                if is_cancelled(): return
+                time.sleep(1)
             
-            # Use KEYCODE_MEDIA_PLAY (126) instead of KEYCODE_MEDIA_PLAY_PAUSE (85)
-            # This ensures it ONLY plays. If it's already auto-playing, it won't pause it.
-            self.adb.run_command(["shell", "input", "keyevent", "126"], s)
+            # Solo aplicamos la logica VIP visual a la app nativa (YT o YT Music)
+            if not is_web_mode:
+                self.log_msg(f" [{s}] [YT-VIP] Escaneando Botn de Play en YouTube...", "info")
+                # El mismo Ojo de Robot de Spotify buscar el botn
+                green_tapped = self._tap_green_play_button(s)
+                
+                if not green_tapped:
+                    self.log_msg(f" [{s}] [YT-VIP] Botn no visible. Intentando Play de auriculares (126)...", "warn")
+                    if not self._is_spotify_playing(s): # Esta funcin escanea el media_session, sirve igual para YT!
+                        self.adb.run_command(["shell", "input", "keyevent", "126"], s)
+                        
+                # Tolerancia para anuncios de YouTube (60s)
+                self.log_msg(f" [{s}] [YT-VIP] Esperando 60s por posibles anuncios dobles...", "info")
+                for _ in range(60):
+                    if is_cancelled(): return
+                    time.sleep(1)
+                    
+                # Sensor Final
+                if not self._is_spotify_playing(s):
+                    self.log_msg(f" [{s}] [YT-VIP] Sigue sin reproducir. Adelantando (87)...", "warn")
+                    self.adb.run_command(["shell", "input", "keyevent", "87"], s)
+                else:
+                    self.log_msg(f" [{s}] [YT-VIP] YouTube Reproduciendo correctamente. Todo en orden.", "success")
+            else:
+                # Flujo normal para Web (Chrome)
+                time.sleep(10)
+                self.adb.run_command(["shell", "input", "keyevent", "126"], s)
             
-            # Redundancia: A veces el primer clic es ignorado si la app sigue cargando
-            time.sleep(6)
-            self.adb.run_command(["shell", "input", "keyevent", "126"], s)
-            
-            # NUEVO: Adelantar inmediatamente para destrabar popups o pantallas estancadas
-            # PERO SOLO si es YT Music o una lista. Si es un video individual normal, no adelantamos para no perderlo.
-            if target_app == "com.google.android.apps.youtube.music" or "/watch?list=" in url:
-                time.sleep(4)
-                self.adb.run_command(["shell", "input", "keyevent", "87"], s)
-            
+        import threading
         threading.Thread(target=delayed_youtube_play, daemon=True).start()
+
 
 
     def _inject_youtube_to_active(self, url):

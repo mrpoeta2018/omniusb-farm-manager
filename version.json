@@ -1,5 +1,5 @@
 {
-    "version": "4.6.12",
+    "version": "4.6.13",
     "release_date": "2026-07-31",
     "check_url": "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/main/version.json",
     "notes": "Monitor de salud automatico: detecta tuneles caidos y reconecta solo. Log persistente en OmniUSB_log.txt",

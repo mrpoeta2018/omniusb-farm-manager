@@ -75,7 +75,7 @@ print("[*] Configurando interfaz visual...")
 try:
     # Forzar modo oscuro directo evita que el módulo 'darkdetect' falle en PCs sin monitor (Headless/VPS)
     ctk.set_appearance_mode("Dark")
-    ctk.set_default_color_theme("blue")
+    ctk.set_default_color_theme("dark-blue")
     # Forzar el escalado evita que Windows intente leer la resolución de un monitor inexistente
     ctk.set_widget_scaling(1.0)
     ctk.set_window_scaling(1.0)
@@ -97,7 +97,7 @@ class LicenseValidationWindow(ctk.CTkToplevel):
         self.hwid = get_hardware_id()
         
         # UI
-        ctk.CTkLabel(self, text="Verificación de Licencia", font=("Arial", 22, "bold"), text_color="#3B82F6").pack(pady=(20, 5))
+        ctk.CTkLabel(self, text="Verificación de Licencia", font=("Arial", 22, "bold"), text_color="#F59E0B").pack(pady=(20, 5))
         ctk.CTkLabel(self, text="Software v4.1 - Protegido por HWID", font=("Arial", 12)).pack(pady=5)
         
         frame = ctk.CTkFrame(self, corner_radius=10)
@@ -420,9 +420,9 @@ class SetupProgressWindow(ctk.CTkToplevel):
         self.tunnel_disabled = tunnel_disabled
         
         if tunnel_disabled:
-            ctk.CTkLabel(self, text="MODO SOLO BOT (WIFI ACTIVO)", text_color="#38BDF8", font=("Arial", 18, "bold")).pack(pady=15)
+            ctk.CTkLabel(self, text="MODO SOLO BOT (WIFI ACTIVO)", text_color="#FCD34D", font=("Arial", 18, "bold")).pack(pady=15)
         else:
-            ctk.CTkLabel(self, text="MODO ARRANQUE ACTIVO", text_color="#3B82F6", font=("Arial", 18, "bold")).pack(pady=15)
+            ctk.CTkLabel(self, text="MODO ARRANQUE ACTIVO", text_color="#F59E0B", font=("Arial", 18, "bold")).pack(pady=15)
         
         self.progress = ctk.CTkProgressBar(self, width=500)
         self.progress.pack(pady=10)
@@ -536,7 +536,7 @@ class ProxyAssignmentWindow(ctk.CTkToplevel):
         self.proxies = proxies # Formatted list
         self.entries = {} # serial -> StringVar
         
-        ctk.CTkLabel(self, text="ASIGNACIÓN DISPOSITIVO <-> PROXY", font=("Arial", 20, "bold"), text_color="#3B82F6").pack(pady=20)
+        ctk.CTkLabel(self, text="ASIGNACIÓN DISPOSITIVO <-> PROXY", font=("Arial", 20, "bold"), text_color="#F59E0B").pack(pady=20)
         
         # Scrollable area
         self.scroll = ctk.CTkScrollableFrame(self, width=750, height=400)
@@ -559,7 +559,7 @@ class ProxyAssignmentWindow(ctk.CTkToplevel):
         btn_fr = ctk.CTkFrame(self, fg_color="transparent")
         btn_fr.pack(pady=20)
         
-        ctk.CTkButton(btn_fr, text="🎲 Mapeado Automático (1 a 1)", command=self.auto_map, fg_color="#6366F1").pack(side="left", padx=10)
+        ctk.CTkButton(btn_fr, text="🎲 Mapeado Automático (1 a 1)", command=self.auto_map, fg_color="#F59E0B").pack(side="left", padx=10)
         ctk.CTkButton(btn_fr, text="💾 Guardar Mapeado", command=self.save_map, fg_color="#10B981").pack(side="left", padx=10)
         ctk.CTkButton(btn_fr, text="❌ Limpiar Todo", command=self.clear_map, fg_color="#EF4444").pack(side="left", padx=10)
 
@@ -686,7 +686,7 @@ class ProxyFarmApp(ctk.CTk):
             
             # Usar un Frame de tkinter nativo o un label nativo para que se adapte al Toplevel limpio,
             # pero como es Toplevel, CTkLabel funciona perfectamente.
-            label = ctk.CTkLabel(widget.tooltip_window, text=text, font=("Arial", 12, "bold"), fg_color="#1E293B", text_color="#38BDF8", corner_radius=6)
+            label = ctk.CTkLabel(widget.tooltip_window, text=text, font=("Arial", 12, "bold"), fg_color="#1E293B", text_color="#FCD34D", corner_radius=6)
             # El padding en CTkLabel se maneja en el pack o pasándole height/width, pero padx/pady en pack funciona.
             label.pack(padx=10, pady=5)
             
@@ -794,7 +794,7 @@ class ProxyFarmApp(ctk.CTk):
                 self.after(0, lambda: self.update_status_lbl.configure(text="🚀 Nueva actualización!", text_color="#10B981"))
                 self.after(0, self._show_update_bar, remote_info)
             else:
-                self.after(0, lambda: self.update_status_lbl.configure(text=f"✅ App al día (v{get_local_version().get('version', '?')})", text_color="#3B82F6"))
+                self.after(0, lambda: self.update_status_lbl.configure(text=f"✅ App al día (v{get_local_version().get('version', '?')})", text_color="#F59E0B"))
                 
         check_for_updates_async(_on_result)
 
@@ -1816,9 +1816,9 @@ class ProxyFarmApp(ctk.CTk):
         ctk.CTkCheckBox(prx_frame, text="🔌 Modo Sin Proxy (Internet del PC)", variable=self.no_proxy_var, font=("Arial", 11, "bold"), text_color="#10B981").pack(side="left", padx=10)
         
         self.bot_only_var = ctk.BooleanVar(value=False)
-        ctk.CTkCheckBox(prx_frame, text="📡 Modo Solo Bot (WiFi Celular)", variable=self.bot_only_var, font=("Arial", 11, "bold"), text_color="#38BDF8").pack(side="left", padx=5)
+        ctk.CTkCheckBox(prx_frame, text="📡 Modo Solo Bot (WiFi Celular)", variable=self.bot_only_var, font=("Arial", 11, "bold"), text_color="#FCD34D").pack(side="left", padx=5)
         
-        self.test_btn = ctk.CTkButton(prx_frame, text="🧪 Probador", width=80, fg_color="#3B82F6", command=self.test_proxies)
+        self.test_btn = ctk.CTkButton(prx_frame, text="🧪 Probador", width=80, fg_color="#F59E0B", command=self.test_proxies)
         self.test_btn.pack(side="right", padx=10)
 
         self.proxy_textbox = ctk.CTkTextbox(frame, height=120)
@@ -1844,11 +1844,11 @@ class ProxyFarmApp(ctk.CTk):
         self.install_btn.pack(pady=5, padx=10, fill="x")
         self.bind_tooltip(self.install_btn, "Instala la app de enrutamiento en los celulares para que reciban internet.")
 
-        self.assign_btn = ctk.CTkButton(frame, text="🎯 ASIGNAR PROXYS MANUAL", command=self.assign_proxies, fg_color="#6366F1", font=("Arial", 13, "bold"))
+        self.assign_btn = ctk.CTkButton(frame, text="🎯 ASIGNAR PROXYS MANUAL", command=self.assign_proxies, fg_color="#F59E0B", font=("Arial", 13, "bold"))
         self.assign_btn.pack(pady=5, padx=10, fill="x")
         self.bind_tooltip(self.assign_btn, "Aplica manualmente las IPs ingresadas a los celulares uno por uno.")
 
-        self.inventory_btn = ctk.CTkButton(frame, text="📦 VER MAPA FÍSICO (HUBs)", command=self.show_inventory, fg_color="#8B5CF6", font=("Arial", 13, "bold"))
+        self.inventory_btn = ctk.CTkButton(frame, text="📦 VER MAPA FÍSICO (HUBs)", command=self.show_inventory, fg_color="#F59E0B", font=("Arial", 13, "bold"))
         self.inventory_btn.pack(pady=5, padx=10, fill="x")
         self.bind_tooltip(self.inventory_btn, "Muestra el puerto USB exacto de cada celular para hallar los desconectados.")
 
@@ -1860,7 +1860,7 @@ class ProxyFarmApp(ctk.CTk):
         self.pause_btn.pack(pady=5, padx=10, fill="x")
         self.bind_tooltip(self.pause_btn, "Pausa la rotación y la música temporalmente sin apagar el internet.")
 
-        self.repair_btn = ctk.CTkButton(frame, text="🔧 REPARAR CAÍDOS", command=self.repair_failed_devices, state="disabled", fg_color="#8B5CF6", font=("Arial", 12, "bold"))
+        self.repair_btn = ctk.CTkButton(frame, text="🔧 REPARAR CAÍDOS", command=self.repair_failed_devices, state="disabled", fg_color="#F59E0B", font=("Arial", 12, "bold"))
         self.repair_btn.pack(pady=5, padx=10, fill="x")
         self.bind_tooltip(self.repair_btn, "Intenta reconectar y estabilizar aquellos dispositivos que tengan falla roja.")
         
@@ -1879,10 +1879,10 @@ class ProxyFarmApp(ctk.CTk):
         
         app_list = [
             ("AWA", "awa.apk", "fm.awa.app", "#D946EF"),
-            ("Pandora", "pandora.apk", "com.pandora.android", "#0EA5E9"),
+            ("Pandora", "pandora.apk", "com.pandora.android", "#D97706"),
             ("Audiomack", "audiomack.apk", "com.audiomack", "#F59E0B"),
             ("Apple Music", "applemusic.apk", "com.apple.android.music", "#EF4444"),
-            ("Tidal", "tidal.apk", "com.aspiro.tidal", "#06B6D4"),
+            ("Tidal", "tidal.apk", "com.aspiro.tidal", "#B45309"),
             ("Amazon Music", "amazonmusic.apk", "com.amazon.mp3", "#FF9900"),
             ("Instagram", "instagram.apk", "com.instagram.android", "#E1306C"),
             ("Kick", "kick.apk", "com.kick.mobile", "#53FC18")
@@ -2025,16 +2025,16 @@ class ProxyFarmApp(ctk.CTk):
         
         # Display Dashboard en vivo
         self.live_status_var = ctk.StringVar(value="Estado: ⏸️ ESPERANDO...")
-        dashboard_frame = ctk.CTkFrame(self.tab_traf, fg_color="#0F172A", corner_radius=8, border_width=1, border_color="#38BDF8")
+        dashboard_frame = ctk.CTkFrame(self.tab_traf, fg_color="#0F172A", corner_radius=8, border_width=1, border_color="#FCD34D")
         dashboard_frame.pack(fill="x", padx=10, pady=(10, 0))
-        self.live_status_lbl = ctk.CTkLabel(dashboard_frame, textvariable=self.live_status_var, font=("Courier New", 14, "bold"), text_color="#38BDF8")
+        self.live_status_lbl = ctk.CTkLabel(dashboard_frame, textvariable=self.live_status_var, font=("Courier New", 14, "bold"), text_color="#FCD34D")
         self.live_status_lbl.pack(pady=8)
         
         # Inicializar el estado de la UI
         self.after(100, self.update_ui_state)
 
         # Shield
-        shield_frame = ctk.CTkFrame(self.tab_traf, fg_color="#1E1E1E", border_width=1, border_color="#3B82F6", corner_radius=8)
+        shield_frame = ctk.CTkFrame(self.tab_traf, fg_color="#1E1E1E", border_width=1, border_color="#F59E0B", corner_radius=8)
         shield_frame.pack(fill="x", padx=10, pady=(10, 0))
         ctk.CTkLabel(shield_frame, text="🛡️ Escudo Anti-Bots", font=("Arial", 12, "bold"), text_color="#60A5FA").pack(side="left", padx=10, pady=5)
         
@@ -2052,7 +2052,7 @@ class ProxyFarmApp(ctk.CTk):
         toolbar.pack(fill="x", padx=10, pady=(10, 5))
 
         ctk.CTkLabel(toolbar, text="Ordenar:", font=("Arial", 11), text_color="#94A3B8").pack(side="left", padx=(10, 5), pady=5)
-        ctk.CTkButton(toolbar, text="🔤 Por Serial", width=120, height=28, command=lambda: self.sort_traffic("serial"), fg_color="#3B82F6").pack(side="left", padx=5, pady=5)
+        ctk.CTkButton(toolbar, text="🔤 Por Serial", width=120, height=28, command=lambda: self.sort_traffic("serial"), fg_color="#F59E0B").pack(side="left", padx=5, pady=5)
         ctk.CTkButton(toolbar, text="🟢 Por Conexión", width=130, height=28, command=lambda: self.sort_traffic("connection"), fg_color="#10B981").pack(side="left", padx=5, pady=5)
         self.traf_sort_lbl = ctk.CTkLabel(toolbar, text="Sin ordenar", font=("Arial", 10), text_color="#64748B")
         self.traf_sort_lbl.pack(side="right", padx=10, pady=5)
@@ -2097,7 +2097,7 @@ class ProxyFarmApp(ctk.CTk):
         ctk.CTkCheckBox(pan_frame, text="📻 Pandora (Listas):", font=("Arial", 11, "bold"), text_color="white", variable=self.use_pan).pack(anchor="w", padx=10, pady=5)
         self.pan_textbox = ctk.CTkTextbox(pan_frame, height=80)
         self.pan_textbox.pack(padx=5, pady=2, fill="x")
-        btn_pan = ctk.CTkButton(pan_frame, text="▶️ Inyectar Pandora", fg_color="#0EA5E9", command=self.inject_manual_pan)
+        btn_pan = ctk.CTkButton(pan_frame, text="▶️ Inyectar Pandora", fg_color="#D97706", command=self.inject_manual_pan)
         btn_pan.pack(side="right", padx=5, pady=5)
 
         # Audiomack
@@ -2393,7 +2393,7 @@ class ProxyFarmApp(ctk.CTk):
         timer_lbl.pack(anchor="w")
         # IP Display
         ctk.CTkLabel(mid_fr, text="IP EXTERNA:", font=("Arial", 10), text_color="gray").pack(anchor="w")
-        ip_val_lbl = ctk.CTkLabel(mid_fr, text="Detectando...", text_color="#22D3EE", font=("Arial", 15, "bold"))
+        ip_val_lbl = ctk.CTkLabel(mid_fr, text="Detectando...", text_color="#FCD34D", font=("Arial", 15, "bold"))
         ip_val_lbl.pack(anchor="w")
         
         # Traffic on right
@@ -2409,10 +2409,10 @@ class ProxyFarmApp(ctk.CTk):
         actions_fr = ctk.CTkFrame(right_info, fg_color="transparent")
         actions_fr.pack(pady=(5, 0))
         serial = dev['serial']
-        ctk.CTkButton(actions_fr, text="👁️", width=36, height=26, fg_color="#3B82F6",
+        ctk.CTkButton(actions_fr, text="👁️", width=36, height=26, fg_color="#F59E0B",
                       command=lambda s=serial: self.launch_scrcpy(s),
                       font=("Arial", 13)).pack(side="left", padx=2)
-        focus_btn = ctk.CTkButton(actions_fr, text="🎯", width=36, height=26, fg_color="#8B5CF6",
+        focus_btn = ctk.CTkButton(actions_fr, text="🎯", width=36, height=26, fg_color="#F59E0B",
                       command=lambda s=serial: self.toggle_focus(s),
                       font=("Arial", 13))
         focus_btn.pack(side="left", padx=2)
@@ -2491,7 +2491,7 @@ class ProxyFarmApp(ctk.CTk):
             self._focus_serial = None
             self._focus_paused = []
             if focus_btn:
-                focus_btn.configure(text="🎯", fg_color="#8B5CF6")
+                focus_btn.configure(text="🎯", fg_color="#F59E0B")
             self.log_msg(f"✅ Todos los dispositivos restaurados.")
             return
 
@@ -3412,7 +3412,7 @@ class ProxyFarmApp(ctk.CTk):
         self.btn_start_acc = ctk.CTkButton(left_frame, text="🌐 1. Abrir Registro Chrome (Visible)", fg_color="#10B981", hover_color="#059669", command=self.start_spotify_account_creation, height=35)
         self.btn_start_acc.pack(pady=5, fill="x", padx=30)
         
-        self.btn_login_acc = ctk.CTkButton(left_frame, text="🚀 2. Iniciar Sesión App (Auto A Ciegas)", fg_color="#6366F1", hover_color="#4F46E5", command=self.start_spotify_login, height=35)
+        self.btn_login_acc = ctk.CTkButton(left_frame, text="🚀 2. Iniciar Sesión App (Auto A Ciegas)", fg_color="#F59E0B", hover_color="#D97706", command=self.start_spotify_login, height=35)
         self.btn_login_acc.pack(pady=5, fill="x", padx=30)
         
         self.acc_slow_mode_var = ctk.BooleanVar(value=False)
@@ -3431,14 +3431,14 @@ class ProxyFarmApp(ctk.CTk):
         # Redundancias por si falla uiautomator
         manual_frame = ctk.CTkFrame(left_frame, fg_color="transparent")
         manual_frame.pack(pady=10)
-        ctk.CTkButton(manual_frame, text="📧 Escribir Correo", width=120, fg_color="#3B82F6", command=self.manual_type_email).pack(side="left", padx=5)
+        ctk.CTkButton(manual_frame, text="📧 Escribir Correo", width=120, fg_color="#F59E0B", command=self.manual_type_email).pack(side="left", padx=5)
         ctk.CTkButton(manual_frame, text="🔑 Escribir Clave", width=120, fg_color="#F59E0B", command=self.manual_type_password).pack(side="left", padx=5)
 
         # Panel Derecho: Logs
         right_frame = ctk.CTkFrame(self.tab_accounts, fg_color="#0F172A", corner_radius=8)
         right_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
         
-        ctk.CTkLabel(right_frame, text="📋 Registro del Proceso en Vivo", font=("Arial", 14, "bold"), text_color="#38BDF8").pack(pady=10)
+        ctk.CTkLabel(right_frame, text="📋 Registro del Proceso en Vivo", font=("Arial", 14, "bold"), text_color="#FCD34D").pack(pady=10)
         self.acc_log_box = ctk.CTkTextbox(right_frame, height=500)
         self.acc_log_box.pack(padx=10, fill="both", expand=True, pady=5)
         

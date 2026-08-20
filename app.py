@@ -3346,16 +3346,79 @@ class ProxyFarmApp(ctk.CTk):
         self.log_msg(f"✅ Búsqueda terminada. Entrando al canal {streamer_name}.", "success")
         return True
 
-    def interact_kick_stream(self, s):
-        import random
-        import time
+    def _kick_chat_engine(self, serial):
+        import random, time
+        if not getattr(self, 'kick_interact', None) or not self.kick_interact.get():
+            return
+            
+        # 1. Asignar Personalidad
+        if not hasattr(self, 'kick_personalities'):
+            self.kick_personalities = {}
+        if serial not in self.kick_personalities:
+            self.kick_personalities[serial] = random.choice(["Fan", "Troll", "Spammer"])
+            
+        perfil = self.kick_personalities[serial]
+        self.log_msg(f"🎭 [{serial[-4:]}] Chat Engine ({perfil}). Analizando contexto...", "info")
+        
+        # 2. Leer pantalla (Chat actual)
+        root = getattr(self, 'pull_and_parse', lambda x: None)(serial)
+        chat_text = ""
+        if root is not None:
+            chat_text = " ".join([n.get("text", "").lower() for n in root.iter("node")])
+            
+        # 3. Analizar Palabras Clave (Triggers)
+        comment = ""
+        if "hora" in chat_text or "time" in chat_text:
+            if perfil == "Fan": comment = "que buena hora para un stream!"
+            elif perfil == "Troll": comment = "ya es tarde, vete a dormir zzz"
+            else: comment = "time is money !drop"
+        elif "manco" in chat_text or "noob" in chat_text or "malo" in chat_text or "fail" in chat_text:
+            if perfil == "Fan": comment = "no le hagas caso a los haters, juegas bien bro!"
+            elif perfil == "Troll": comment = "literalmente el peor jugador que he visto jajaja"
+            else: comment = "F en el chat"
+        elif "hola" in chat_text or "saludos" in chat_text or "hi chat" in chat_text:
+            if perfil == "Fan": comment = "Hola chat!! un abrazo a todos"
+            elif perfil == "Troll": comment = "nadie te saludo xd"
+            else: comment = "hola !discord"
+        elif "juego" in chat_text or "game" in chat_text:
+            if perfil == "Fan": comment = "este juego es una obra maestra"
+            elif perfil == "Troll": comment = "juego muerto (dead game)"
+            else: comment = "!game"
+            
+        # 4. Fallback: Si no hay palabras clave, lanzar comentario genérico
+        if not comment:
+            if perfil == "Fan":
+                comments = ["W stream", "bro you are insane", "love this", "🔥", "best streamer ever", "let's gooo", "huge W", "se prendió esto"]
+            elif perfil == "Troll":
+                comments = ["L", "boring af", "skill issue", "go next", "cringe", "zzz", "L stream", "mucho texto"]
+            else: # Spammer
+                comments = ["!drop", "!discord", "!points", "💯💯💯", "👀", "!socials", "kick.com"]
+            comment = random.choice(comments)
+            
+        self.log_msg(f"💬 [{serial[-4:]}] Respondiendo: '{comment}'", "info")
+        
+        # 5. Enviar mensaje
+        click_chat = self.find_and_click_by_text(serial, ["send a message", "enviar mensaje", "chat"])
+        if not click_chat:
+            self.adb.run_command(["shell", "input", "tap", "200", "1250"], serial)
+        time.sleep(2)
+        
+        for char in comment:
+            self.adb.run_command(["shell", "input", "text", char], serial)
+            time.sleep(0.1)
+        time.sleep(1)
+        
+        self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # ENTER key
+        time.sleep(1)
+        self.adb.run_command(["shell", "input", "keyevent", "4"], serial) # Ocultar teclado
+        self.log_msg(f"✅ Comentario enviado con éxito.", "success")
 
+    def interact_kick_stream(self, s):
+        import time
         # === 1. Auto-Seguidor (Follow) ===
         self.log_msg(f"Intentando dar Follow en {s}...", "info")
-        # Tap en el centro del video para despertar la interfaz (overlay)
         self.adb.run_command(["shell", "input", "tap", "360", "400"], s)
         time.sleep(1.5)
-        # Buscar el botón de Seguir
         if self.find_and_click_by_text(s, ["follow", "seguir"]):
             self.log_msg(f"✅ ¡Se ha seguido al canal en {s}!", "success")
         else:
@@ -3366,52 +3429,15 @@ class ProxyFarmApp(ctk.CTk):
         self.log_msg(f"Buscando reglas de chat en {s}...", "info")
         click_rules = self.find_and_click_by_text(s, ["accept", "aceptar", "start chatting", "agree", "entendido"])
         if not click_rules:
-            # Fallback a toque en el medio de la pantalla inferior
             self.adb.run_command(["shell", "input", "tap", "360", "1100"], s)
         time.sleep(2)
 
-        # === 3. Sistema de Personalidades (Chat Engine) ===
-        if getattr(self, 'kick_interact', None) and self.kick_interact.get():
-            if random.random() < 0.6: # 60% de probabilidad de comentar
-                
-                # Asignar personalidad si no tiene
-                if not hasattr(self, 'kick_personalities'):
-                    self.kick_personalities = {}
-                if s not in self.kick_personalities:
-                    self.kick_personalities[s] = random.choice(["Fan", "Troll", "Spammer"])
-                
-                perfil = self.kick_personalities[s]
-                self.log_msg(f"🎭 Personalidad de {s[-4:]}: {perfil}. Pensando comentario...", "info")
-                
-                if perfil == "Fan":
-                    comments = ["W stream", "bro you are insane", "love this", "🔥", "best streamer ever", "let's gooo", "huge W"]
-                elif perfil == "Troll":
-                    comments = ["L", "boring af", "skill issue", "go next", "cringe", "zzz", "L stream"]
-                else: # Spammer
-                    comments = ["!drop", "!discord", "!points", "💯💯💯", "👀", "!socials"]
-                
-                comment = random.choice(comments)
+        # === 3. Primer saludo al entrar (40% de probabilidad) ===
+        import random
+        if random.random() < 0.4:
+            self._kick_chat_engine(s)
 
-                self.log_msg(f"💬 Escribiendo '{comment}' en chat de Kick...", "info")
-                # Tocar la caja de texto (suele estar en la parte inferior [100, 1250])
-                click_chat = self.find_and_click_by_text(s, ["send a message", "enviar mensaje", "chat"])
-                if not click_chat:
-                    self.adb.run_command(["shell", "input", "tap", "200", "1250"], s)
-                time.sleep(2)
-
-                # Escribir con teclado
-                for char in comment:
-                    self.adb.run_command(["shell", "input", "text", char], s)
-                    time.sleep(0.1)
-                time.sleep(1)
-
-                # Enviar (enter o boton)
-                self.adb.run_command(["shell", "input", "keyevent", "66"], s) # ENTER key
-                time.sleep(1)
-                # Ocultar teclado
-                self.adb.run_command(["shell", "input", "keyevent", "4"], s)
-                self.log_msg(f"✅ Comentario '{comment}' enviado en Kick ({perfil}).", "success")
-
+    def inject_kick(self):
     def inject_kick(self):
     def inject_kick(self):
         self.stop_social_threads = False
@@ -3441,12 +3467,18 @@ class ProxyFarmApp(ctk.CTk):
                 
                 if self.kick_auto.get():
                     def _keepalive(serial):
-                        for _ in range(30):
+                        import random
+                        for loop_count in range(30):
                             for _ in range(60):
                                 if getattr(self, 'stop_social_threads', False): return
                                 time.sleep(1)
-                            # Tocar una esquina superior donde no haya botones que pausen
+                                
+                            # Tocar una esquina superior para mantener viva la pantalla
                             self.adb.run_command(["shell", "input", "tap", "10", "300"], serial)
+                            
+                            # Motor de Chat Continuo (Cada ~10 minutos = 10 iteraciones de 60s)
+                            if loop_count % 10 == 0 and loop_count > 0:
+                                self._kick_chat_engine(serial)
                     threading.Thread(target=_keepalive, args=(s,), daemon=True).start()
                     self.log_msg(f"🛡️ Keep-Alive iniciado en {s}", "info")
                 time.sleep(2)

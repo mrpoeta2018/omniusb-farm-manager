@@ -1387,6 +1387,11 @@ class ProxyFarmApp(ctk.CTk):
                                 
                             if ('reproducir playlist' in desc or 'play playlist' in desc or 'aleatorio' in desc or desc == 'reproducir' or desc == 'play') and 'agregar' not in desc:
                                 btn_play = (cx, cy)
+                            if 'saltar' in desc or 'skip' in desc or 'omitir' in desc:
+                                self.log_msg(f" [{serial}] [Anti-Ads] Saltando anuncio...", "warn")
+                                self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], serial)
+                                time.sleep(1)
+
                                 
                 if btn_play:
                     if btn_agregar:
@@ -1437,7 +1442,8 @@ class ProxyFarmApp(ctk.CTk):
         # Despertar pantalla
         self.adb.run_command(["shell", "input", "keyevent", "224"], serial)
         # Apagar TODAS las demas apps (incluyendo Chrome) para evitar que el celular se llene de pestaas y colapse.
-        # Excluimos Spotify para que no pierda la MediaSession.
+        # Forzamos cierre para no acumular pestañas y que arranque limpio
+        self.adb.run_command(["shell", "am", "force-stop", "com.spotify.music"], serial)
         self._cleanup_background_apps(serial, exclude_pkg="com.spotify.music")
         
         import time

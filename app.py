@@ -3904,7 +3904,14 @@ class ProxyFarmApp(ctk.CTk):
         import os
         
         def s_sleep(base_time):
-            time.sleep(base_time * 2.5 if is_slow else base_time)
+            import time
+            total = base_time * 2.5 if is_slow else base_time
+            slept = 0
+            while slept < total:
+                if getattr(self, 'stop_signup', False):
+                    raise Exception('PROCESO DETENIDO_POR_EL_USUARIO')
+                time.sleep(0.5)
+                slept += 0.5
             
         try:
             
@@ -3949,7 +3956,7 @@ class ProxyFarmApp(ctk.CTk):
             
             self.acc_log("Ingresando correo...")
             self.adb.run_command(["shell", "input", "tap", "540", "500"], serial)
-            s_sleep(0.5)
+            time.sleep(0.5)
             self.adb.run_command(["shell", "input", "text", email], serial)
             s_sleep(1.5)
             
@@ -3967,7 +3974,7 @@ class ProxyFarmApp(ctk.CTk):
             
             self.acc_log("Ingresando contraseña...")
             self.adb.run_command(["shell", "input", "tap", "540", "500"], serial)
-            s_sleep(0.5)
+            time.sleep(0.5)
             self.adb.run_command(["shell", "input", "text", pwd], serial)
             s_sleep(1.0)
             
@@ -3977,7 +3984,7 @@ class ProxyFarmApp(ctk.CTk):
             click_ok2 = self.find_and_click_by_text(serial, ["Siguiente", "Next"])
             if not click_ok2:
                 self.adb.run_command(["shell", "input", "tap", "540", "850"], serial)
-            time.sleep(4.0)
+            s_sleep(4.0)
             
             # --- FASE AUTOMÁTICA EXTRA: FECHA, GÉNERO Y NOMBRE ---
             
@@ -4017,7 +4024,7 @@ class ProxyFarmApp(ctk.CTk):
             random_year = random.randint(1966, 2008)
             self.acc_log(f"Escribiendo año final aleatorio ({random_year})...")
             self.adb.run_command(["shell", "input", "text", str(random_year)], serial)
-            time.sleep(random.uniform(1.0, 2.5))
+            s_sleep(random.uniform(1.0, 2.5))
             
             self.acc_log("Pulsando chulito (Enter) para ocultar teclado...")
             self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # Enter / Done para ocultar teclado
@@ -4027,7 +4034,7 @@ class ProxyFarmApp(ctk.CTk):
             click_ok3 = self.find_and_click_by_text(serial, ["Siguiente", "Next"])
             if not click_ok3:
                 self.adb.run_command(["shell", "input", "tap", "540", "850"], serial)
-            time.sleep(4.0)
+            s_sleep(4.0)
 
             self.acc_log("Buscando opción de Género (Aleatorio)...")
             import random
@@ -4045,7 +4052,7 @@ class ProxyFarmApp(ctk.CTk):
                 self.adb.run_command(["shell", "input", "tap", "540", "500"], serial)
             
             self.acc_log("Esperando que cargue la selección...")
-            time.sleep(random.uniform(2.5, 3.5))
+            s_sleep(random.uniform(2.5, 3.5))
             
             # A veces hay que dar a Siguiente
             self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # Ocultar teclado/confirmar
@@ -4120,7 +4127,7 @@ class ProxyFarmApp(ctk.CTk):
                 self.acc_log("No se ubicó botón seguro, usando Tap Ciego...")
                 self.adb.run_command(["shell", "input", "tap", "540", "1100"], serial)
             
-            time.sleep(6.0) # Esperar a ver si cambia a Captcha
+            s_sleep(6.0) # Esperar a ver si cambia a Captcha
             
             # Validación Final
             self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)

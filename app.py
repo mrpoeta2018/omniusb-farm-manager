@@ -3001,12 +3001,33 @@ class ProxyFarmApp(ctk.CTk):
                         out = out_tuple[0] if isinstance(out_tuple, tuple) else out_tuple
                         if out:
                             # Valid audio/video packages
-                            valid_pkgs = ["com.spotify.music", "com.google.android.youtube", "com.google.android.apps.youtube.music", 
-                                          "com.pandora.android", "fm.awa.app", "com.audiomack", "com.aspiro.tidal", 
-                                          "com.apple.android.music", "com.amazon.mp3"]
-                            
+                            valid_pkgs = ["com.spotify.music", "com.google.android.youtube", "com.google.android.apps.youtube.music",
+                                          "com.pandora.android", "fm.awa.app", "com.audiomack", "com.aspiro.tidal",
+                                          "com.apple.android.music", "com.amazon.mp3", "com.kick.mobile"]
+
                             is_running = any(pkg in out for pkg in valid_pkgs)
-                            
+                            is_kick = "com.kick.mobile" in out
+
+                            if is_kick:
+                                # Sistema de Auto-Curacion Kick
+                                root = getattr(self, 'pull_and_parse', lambda x: None)(serial)
+                                if root is not None:
+                                    texts = [n.get("text", "").lower() for n in root.iter("node")]
+                                    if "featured creators" in texts or "top live categories" in texts:
+                                        self.log_msg(f"🚑 Protocolo de Rescate: {serial[-4:]} se perdió en el menú de Kick. Relanzando...", "error")
+                                        if hasattr(self, 'kick_textbox'):
+                                            urls = [u.strip() for u in self.kick_textbox.get("1.0", "end").strip().split('
+') if u.strip()]
+                                            if urls:
+                                                import threading
+                                                def _rescue(s):
+                                                    import random
+                                                    streamer = random.choice(urls).rstrip('/').split('/')[-1]
+                                                    self._kick_search_and_enter(s, streamer, is_slow=False)
+                                                    self.interact_kick_stream(s)
+                                                threading.Thread(target=_rescue, args=(serial,), daemon=True).start()
+                                                continue # Skip standard restore
+
                             if not is_running:
                                 self.log_msg(f"🛡️ Watchdog: App cerrada en {serial[-4:]}. Restaurando...", "warn")
                                 # Trigger re-injection
@@ -3326,41 +3347,72 @@ class ProxyFarmApp(ctk.CTk):
         return True
 
     def interact_kick_stream(self, s):
-        self.log_msg(f"Buscando reglas de chat en {s}...", "info")
         import random
-        # Buscar botones de aceptar reglas
+        import time
+
+        # === 1. Auto-Seguidor (Follow) ===
+        self.log_msg(f"Intentando dar Follow en {s}...", "info")
+        # Tap en el centro del video para despertar la interfaz (overlay)
+        self.adb.run_command(["shell", "input", "tap", "360", "400"], s)
+        time.sleep(1.5)
+        # Buscar el botón de Seguir
+        if self.find_and_click_by_text(s, ["follow", "seguir"]):
+            self.log_msg(f"✅ ¡Se ha seguido al canal en {s}!", "success")
+        else:
+            self.log_msg(f"No se vio el botón Follow. Tal vez ya lo sigue.", "warn")
+        time.sleep(1)
+
+        # === 2. Aceptar Reglas del Chat ===
+        self.log_msg(f"Buscando reglas de chat en {s}...", "info")
         click_rules = self.find_and_click_by_text(s, ["accept", "aceptar", "start chatting", "agree", "entendido"])
         if not click_rules:
             # Fallback a toque en el medio de la pantalla inferior
             self.adb.run_command(["shell", "input", "tap", "360", "1100"], s)
         time.sleep(2)
-        
-        # Ocasionalmente comentar
+
+        # === 3. Sistema de Personalidades (Chat Engine) ===
         if getattr(self, 'kick_interact', None) and self.kick_interact.get():
-            if random.random() < 0.4: # 40% de probabilidad
-                self.log_msg(f"💬 Escribiendo en chat de Kick en {s}...", "info")
+            if random.random() < 0.6: # 60% de probabilidad de comentar
+                
+                # Asignar personalidad si no tiene
+                if not hasattr(self, 'kick_personalities'):
+                    self.kick_personalities = {}
+                if s not in self.kick_personalities:
+                    self.kick_personalities[s] = random.choice(["Fan", "Troll", "Spammer"])
+                
+                perfil = self.kick_personalities[s]
+                self.log_msg(f"🎭 Personalidad de {s[-4:]}: {perfil}. Pensando comentario...", "info")
+                
+                if perfil == "Fan":
+                    comments = ["W stream", "bro you are insane", "love this", "🔥", "best streamer ever", "let's gooo", "huge W"]
+                elif perfil == "Troll":
+                    comments = ["L", "boring af", "skill issue", "go next", "cringe", "zzz", "L stream"]
+                else: # Spammer
+                    comments = ["!drop", "!discord", "!points", "💯💯💯", "👀", "!socials"]
+                
+                comment = random.choice(comments)
+
+                self.log_msg(f"💬 Escribiendo '{comment}' en chat de Kick...", "info")
                 # Tocar la caja de texto (suele estar en la parte inferior [100, 1250])
                 click_chat = self.find_and_click_by_text(s, ["send a message", "enviar mensaje", "chat"])
                 if not click_chat:
                     self.adb.run_command(["shell", "input", "tap", "200", "1250"], s)
                 time.sleep(2)
-                
-                comments = ["W", "Let's go", "🔥", "💯", "yooo", "epic", "sheesh"]
-                comment = random.choice(comments)
-                
+
                 # Escribir con teclado
                 for char in comment:
                     self.adb.run_command(["shell", "input", "text", char], s)
                     time.sleep(0.1)
                 time.sleep(1)
-                
+
                 # Enviar (enter o boton)
                 self.adb.run_command(["shell", "input", "keyevent", "66"], s) # ENTER key
                 time.sleep(1)
                 # Ocultar teclado
                 self.adb.run_command(["shell", "input", "keyevent", "4"], s)
-                self.log_msg(f"✅ Comentario '{comment}' enviado en Kick.", "success")
+                self.log_msg(f"✅ Comentario '{comment}' enviado en Kick ({perfil}).", "success")
 
+    def inject_kick(self):
     def inject_kick(self):
         self.stop_social_threads = False
         if not hasattr(self, 'engine') or not getattr(self.engine, 'active_devices', []):

@@ -3456,6 +3456,8 @@ class ProxyFarmApp(ctk.CTk):
         for widget in self.acc_devices_frame.winfo_children():
             widget.destroy()
         self.acc_device_vars.clear()
+        if not hasattr(self, 'acc_device_checkboxes'): self.acc_device_checkboxes = {}
+        self.acc_device_checkboxes.clear()
         
         if not serials:
             ctk.CTkLabel(self.acc_devices_frame, text="No hay celulares detectados").pack(pady=5)
@@ -3466,6 +3468,7 @@ class ProxyFarmApp(ctk.CTk):
             var = ctk.BooleanVar(value=was_selected)
             self.acc_device_vars[serial] = var
             cb = ctk.CTkCheckBox(self.acc_devices_frame, text=serial, variable=var)
+            self.acc_device_checkboxes[serial] = cb
             cb.pack(pady=2, anchor="w", padx=10)
 
     def acc_log(self, text, level="info"):
@@ -3636,6 +3639,11 @@ class ProxyFarmApp(ctk.CTk):
         
         self.acc_log(f"=== INICIANDO COLA SECUENCIAL ({total_devices} Dispositivos) ===")
         
+        # Resetear colores de los checkboxes seleccionados a blanco antes de empezar
+        for s in selected:
+            if hasattr(self, 'acc_device_checkboxes') and s in self.acc_device_checkboxes:
+                self.after(0, lambda dev=s: self.acc_device_checkboxes[dev].configure(text_color="white"))
+        
         for idx, serial in enumerate(selected):
             if getattr(self, 'stop_signup', False):
                 self.acc_log("⛔ Proceso cancelado por el usuario.", "error")
@@ -3670,6 +3678,8 @@ class ProxyFarmApp(ctk.CTk):
                 
             if success:
                 success_count += 1
+                if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
+                    self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text_color="#10B981"))
             else:
                 failed_count += 1
                 self.acc_log(f"❌ {serial} saltado tras {max_retries} intentos.", "error")

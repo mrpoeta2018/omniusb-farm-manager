@@ -1413,19 +1413,26 @@ class ProxyFarmApp(ctk.CTk):
         return False
 
     def _is_spotify_playing(self, serial):
+        """Revisa si CUALQUIER app de musica o youtube esta reproduciendo audio"""
         try:
             out_tuple = self.adb.run_command(["shell", "dumpsys", "media_session"], serial)
             out = out_tuple[0] if isinstance(out_tuple, tuple) else out_tuple
             if not out: return False
-            in_spotify = False
-            for line in out.split('\n'):
+            in_target = False
+            valid_pkgs = ["com.spotify.music", "com.google.android.youtube", "com.google.android.apps.youtube.music", 
+                          "com.pandora.android", "fm.awa.app", "com.audiomack", "com.aspiro.tidal", 
+                          "com.apple.android.music", "com.amazon.mp3", "com.android.chrome"]
+                          
+            for line in out.split(chr(10)):
                 line = line.strip()
-                if 'com.spotify.music' in line:
-                    in_spotify = True
-                elif 'package=' in line and 'com.spotify.music' not in line:
-                    in_spotify = False
+                
+                # Al detectar cualquier paquete valido, activamos la bandera de rastreo
+                if any(pkg in line for pkg in valid_pkgs):
+                    in_target = True
+                elif 'package=' in line:
+                    in_target = False
                     
-                if in_spotify and 'state=PlaybackState' in line:
+                if in_target and 'state=PlaybackState' in line:
                     if 'state=3' in line:
                         return True # PLAYING
                     elif 'state=2' in line:

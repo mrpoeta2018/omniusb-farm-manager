@@ -3996,10 +3996,30 @@ class ProxyFarmApp(ctk.CTk):
                 if os.path.exists(local_path): os.remove(local_path)
                 pantalla_texto = " ".join([n.get("text", "") for n in root.iter()]).lower()
                 if "como te llamas" in pantalla_texto or "what's your name" in pantalla_texto or "crear cuenta" in pantalla_texto:
-                    self.acc_log("❌ [ERROR] El bot sigue en la pantalla de Nombre. Algo impidió crear la cuenta.", "error")
+                    self.acc_log(" [ERROR] El bot sigue en la pantalla de Nombre. Algo impidio crear la cuenta.", "error")
                     return False
+                elif "captcha" in pantalla_texto or "robot" in pantalla_texto or "proteger tu cuenta" in pantalla_texto:
+                    self.acc_log(" Detectado Captcha. Deteniendo proceso para resolucion manual.", "warn")
+                    return True
                 else:
-                    self.acc_log("✅ Proceso automático finalizado. Listo en Captcha.", "success")
+                    self.acc_log(" ¡SIN CAPTCHA! Cuenta creada limpia. Pasando a Post-Registro...", "success")
+                    
+                    if not artists:
+                        artists = "Bad Bunny, Taylor Swift, Drake, The Weeknd, Ed Sheeran"
+                    
+                    self._spotify_follow_artists_thread(serial, artists)
+                    
+                    import random
+                    playlists = [p.strip() for p in getattr(self, 'playlist_textbox', None).get("1.0", "end").strip().split(chr(10)) if p.strip()] if getattr(self, 'playlist_textbox', None) else []
+                    
+                    if playlists:
+                        pl = random.choice(playlists)
+                        self.acc_log(f" Reproduciendo lista automaticamente: {pl}", "success")
+                        # _inject_playlist_to_single spawns a daemon thread, so it is safe to call directly.
+                        self._inject_playlist_to_single(serial, pl)
+                    else:
+                        self.acc_log(" No hay listas de Spotify para reproducir en la pestaña General.", "warn")
+                        
                     return True
             except:
                 self.acc_log("✅ Proceso automático asume éxito (no se pudo verificar). Listo en Captcha.", "success")

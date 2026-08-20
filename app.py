@@ -1354,7 +1354,7 @@ class ProxyFarmApp(ctk.CTk):
 
 
     def _tap_green_play_button(self, serial):
-        """Busca y presiona 'Agregar a biblioteca' y luego el boton verde de Play con reintentos."""
+        """Busca y presiona 'Agregar a biblioteca', boton verde de Play, o Salta Anuncios."""
         import time
         import xml.etree.ElementTree as ET
         
@@ -1372,26 +1372,31 @@ class ProxyFarmApp(ctk.CTk):
                 btn_play = None
                 
                 for node in root.iter('node'):
-                    desc = node.get('content-desc', '').lower()
-                    if node.get('class') == 'android.widget.Button':
-                        bounds = node.get('bounds', '')
-                        import re
-                        match = re.match(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', bounds)
-                        if match:
-                            x1, y1, x2, y2 = map(int, match.groups())
-                            cx = (x1 + x2) // 2
-                            cy = (y1 + y2) // 2
+                    desc = (node.get('content-desc') or '').lower()
+                    text = (node.get('text') or '').lower()
+                    cls = node.get('class')
+                    bounds = node.get('bounds', '')
+                    
+                    import re
+                    match = re.match(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', bounds)
+                    if not match: continue
+                    x1, y1, x2, y2 = map(int, match.groups())
+                    cx = (x1 + x2) // 2
+                    cy = (y1 + y2) // 2
+                    
+                    # 1. Anti-Ads Universal (sin importar la clase)
+                    if 'saltar' in desc or 'skip' in desc or 'omitir' in desc or 'saltar' in text or 'skip' in text or 'omitir' in text:
+                        self.log_msg(f" [{serial}] [Anti-Ads] Saltando anuncio encontrado en pantalla...", "warn")
+                        self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], serial)
+                        time.sleep(2)
+                        
+                    # 2. Spotify Play/Agregar (Solo botones)
+                    if cls == 'android.widget.Button':
+                        if 'agregar' in desc and 'playlist' in desc:
+                            btn_agregar = (cx, cy)
                             
-                            if 'agregar' in desc and 'playlist' in desc:
-                                btn_agregar = (cx, cy)
-                                
-                            if ('reproducir playlist' in desc or 'play playlist' in desc or 'aleatorio' in desc or desc == 'reproducir' or desc == 'play') and 'agregar' not in desc:
-                                btn_play = (cx, cy)
-                            if 'saltar' in desc or 'skip' in desc or 'omitir' in desc:
-                                self.log_msg(f" [{serial}] [Anti-Ads] Saltando anuncio...", "warn")
-                                self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], serial)
-                                time.sleep(1)
-
+                        if ('reproducir playlist' in desc or 'play playlist' in desc or 'aleatorio' in desc or desc == 'reproducir' or desc == 'play') and 'agregar' not in desc:
+                            btn_play = (cx, cy)
                                 
                 if btn_play:
                     if btn_agregar:

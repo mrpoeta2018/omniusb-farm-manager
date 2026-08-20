@@ -1409,7 +1409,8 @@ class ProxyFarmApp(ctk.CTk):
 
     def _is_spotify_playing(self, serial):
         try:
-            out = self.adb.run_command(["shell", "dumpsys", "media_session"], serial)
+            out_tuple = self.adb.run_command(["shell", "dumpsys", "media_session"], serial)
+            out = out_tuple[0] if isinstance(out_tuple, tuple) else out_tuple
             if not out: return False
             in_spotify = False
             for line in out.split('\n'):
@@ -2978,7 +2979,8 @@ class ProxyFarmApp(ctk.CTk):
                     
                     # Watchdog: Every 10 mins (approx 10% chance per minute to check app focus)
                     if self.watchdog_enabled.get() and random.randint(1, 10) == 1:
-                        out = self.adb.run_command(["shell", "dumpsys", "window", "windows", "|", "grep", "-E", "'mCurrentFocus|mFocusedApp'"], serial)
+                        out_tuple = self.adb.run_command(["shell", "dumpsys", "window", "windows", "|", "grep", "-E", "'mCurrentFocus|mFocusedApp'"], serial)
+                        out = out_tuple[0] if isinstance(out_tuple, tuple) else out_tuple
                         if out:
                             # Valid audio/video packages
                             valid_pkgs = ["com.spotify.music", "com.google.android.youtube", "com.google.android.apps.youtube.music", 

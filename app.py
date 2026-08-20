@@ -3039,9 +3039,7 @@ class ProxyFarmApp(ctk.CTk):
                 self.adb.run_command(["shell", "am", "force-stop", "com.kick.mobile"], s)
                 self.adb.run_command(["shell", "input", "keyevent", "3"], s)
         import tkinter.messagebox as mb
-        mb.showinfo("Redes Detenidas", "Se han detenido todas las tareas de redes sociales y se han cerrado las aplicaciones.
-
-Los celulares estn listos para volver a farmear Spotify.")
+        mb.showinfo("Redes Detenidas", "Se han detenido todas las tareas de redes sociales y se han cerrado las aplicaciones.\n\nLos celulares están listos para volver a farmear Spotify.")
 
     def interact_ig_post(self, s):
         self.log_msg(f"Iniciando interacción avanzada en {s}...", "info")

@@ -3003,13 +3003,17 @@ class ProxyFarmApp(ctk.CTk):
 
     def stop_social_bots(self):
         self.stop_social_threads = True
-        self.log_msg("🛑 Deteniendo Redes y cerrando apps...", "warn")
+        self.log_msg(" Deteniendo Redes y cerrando apps...", "warn")
         if hasattr(self, 'engine') and getattr(self.engine, 'active_devices', []):
             for dev in self.engine.active_devices:
                 s = dev['serial']
                 self.adb.run_command(["shell", "am", "force-stop", "com.instagram.android"], s)
                 self.adb.run_command(["shell", "am", "force-stop", "com.kick.mobile"], s)
                 self.adb.run_command(["shell", "input", "keyevent", "3"], s)
+        import tkinter.messagebox as mb
+        mb.showinfo("Redes Detenidas", "Se han detenido todas las tareas de redes sociales y se han cerrado las aplicaciones.
+
+Los celulares estn listos para volver a farmear Spotify.")
 
     def interact_ig_post(self, s):
         self.log_msg(f"Iniciando interacción avanzada en {s}...", "info")
@@ -3469,10 +3473,14 @@ class ProxyFarmApp(ctk.CTk):
         selected = [s for s, v in self.acc_device_vars.items() if v.get()]
         if not selected:
             self.acc_log("Selecciona al menos un celular", "warn")
+            import tkinter.messagebox as mb
+            mb.showwarning("Atencin", "Debes seleccionar al menos un celular.")
             return
             
-        self.btn_start_acc.configure(state="disabled", text="⏳ Registrando...")
-        threading.Thread(target=self._spotify_account_creator_thread, args=(serial,), daemon=True).start()
+        self.btn_start_acc.configure(state="disabled", text=" Registrando...")
+        for serial in selected:
+            import threading
+            threading.Thread(target=self._spotify_account_creator_thread, args=(serial,), daemon=True).start()
 
     def _spotify_account_creator_thread(self, serial):
         import random

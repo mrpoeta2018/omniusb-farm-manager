@@ -3664,6 +3664,16 @@ class ProxyFarmApp(ctk.CTk):
         if hasattr(self, 'btn_stop_signup'):
             self.after(0, lambda: self.btn_stop_signup.configure(state="disabled"))
 
+    def pull_and_parse(self, serial):
+        import xml.etree.ElementTree as ET
+        self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/dump.xml"], serial)
+        self.adb.run_command(["pull", "/sdcard/dump.xml", "dump.xml"], serial)
+        try:
+            with open("dump.xml", "r", encoding="utf-8", errors="ignore") as f:
+                return ET.fromstring(f.read())
+        except:
+            return None
+
     def _spotify_logout_thread(self, serial):
         self.acc_log(f"Iniciando cierre de sesión en {serial}...")
 

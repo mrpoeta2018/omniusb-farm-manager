@@ -1354,9 +1354,8 @@ class ProxyFarmApp(ctk.CTk):
 
 
     def _tap_green_play_button(self, serial):
-        """Busca el boton verde de Play en la pantalla y lo toca dinamicamente."""
+        """Busca y presiona 'Agregar a biblioteca' y luego el botn verde de Play."""
         try:
-            # Volcar la interfaz a XML
             self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
             out = self.adb.run_command(["shell", "cat", "/sdcard/window_dump.xml"], serial)
             if not out: return False
@@ -1364,11 +1363,12 @@ class ProxyFarmApp(ctk.CTk):
             import xml.etree.ElementTree as ET
             root = ET.fromstring(out)
             
-            # Buscar el boton por palabras clave en cualquier idioma
+            btn_agregar = None
+            btn_play = None
+            
             for node in root.iter('node'):
                 desc = node.get('content-desc', '').lower()
-                # Boton verde de Spotify suele decir "Reproducir playlist", "Play playlist", "Aleatorio", etc.
-                if node.get('class') == 'android.widget.Button' and ('playlist' in desc or 'reproducir' in desc or 'play' in desc):
+                if node.get('class') == 'android.widget.Button':
                     bounds = node.get('bounds', '')
                     import re
                     match = re.match(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', bounds)
@@ -1376,9 +1376,26 @@ class ProxyFarmApp(ctk.CTk):
                         x1, y1, x2, y2 = map(int, match.groups())
                         cx = (x1 + x2) // 2
                         cy = (y1 + y2) // 2
-                        self.log_msg(f" [{serial}] Botn Verde Encontrado en X:{cx} Y:{cy}", "info")
-                        self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], serial)
-                        return True
+                        
+                        if 'agregar' in desc and 'playlist' in desc:
+                            btn_agregar = (cx, cy)
+                            
+                        if ('reproducir playlist' in desc or 'play playlist' in desc or 'aleatorio' in desc or desc == 'reproducir' or desc == 'play') and 'agregar' not in desc:
+                            btn_play = (cx, cy)
+                            
+            # 1. Tocar Agregar si existe
+            if btn_agregar:
+                self.log_msg(f" [{serial}] [VIP] Guardando playlist en biblioteca...", "success")
+                self.adb.run_command(["shell", "input", "tap", str(btn_agregar[0]), str(btn_agregar[1])], serial)
+                import time
+                time.sleep(2)
+                
+            # 2. Tocar Play Verde
+            if btn_play:
+                self.log_msg(f" [{serial}] [VIP] Botn Verde Encontrado. Anclando lista...", "success")
+                self.adb.run_command(["shell", "input", "tap", str(btn_play[0]), str(btn_play[1])], serial)
+                return True
+                
             return False
         except Exception as e:
             return False

@@ -4115,25 +4115,10 @@ class ProxyFarmApp(ctk.CTk):
                     self.acc_log(" Detectado Captcha. Deteniendo proceso para resolucion manual.", "warn")
                     return True
                 else:
-                    self.acc_log(" ¡SIN CAPTCHA! Cuenta creada limpia. Pasando a Post-Registro...", "success")
-                    
-                    if not artists:
-                        artists = "Bad Bunny, Taylor Swift, Drake, The Weeknd, Ed Sheeran"
-                    
-                    self._spotify_follow_artists_thread(serial, artists)
-                    
-                    import random
-                    playlists = [p.strip() for p in getattr(self, 'playlist_textbox', None).get("1.0", "end").strip().split(chr(10)) if p.strip()] if getattr(self, 'playlist_textbox', None) else []
-                    
-                    if playlists:
-                        pl = random.choice(playlists)
-                        self.acc_log(f" Reproduciendo lista automaticamente: {pl}", "success")
-                        # _inject_playlist_to_single spawns a daemon thread, so it is safe to call directly.
-                        self._inject_playlist_to_single(serial, pl)
-                    else:
-                        self.acc_log(" No hay listas de Spotify para reproducir en la pestaña General.", "warn")
-                        
+                    self.acc_log(" ✅ Formulario completado. Si sale Captcha, por favor resuélvelo manual.", "success")
+                    self.acc_log(" 💡 NOTA: Usa el botón '4. Seguir Artistas' cuando la cuenta ya esté limpia.", "warn")
                     return True
+
             except:
                 self.acc_log("✅ Proceso automático asume éxito (no se pudo verificar). Listo en Captcha.", "success")
                 return True

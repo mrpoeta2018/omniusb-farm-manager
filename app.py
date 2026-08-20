@@ -1277,7 +1277,7 @@ class ProxyFarmApp(ctk.CTk):
             dump_path = f"/sdcard/dump_clone_{serial}.xml"
             import subprocess
             subprocess.run([".\\omniusb-farm-manager\\platform-tools\\adb.exe", "-s", serial, "shell", "uiautomator", "dump", dump_path], capture_output=True)
-            res = subprocess.run([".\\omniusb-farm-manager\\platform-tools\\adb.exe", "-s", serial, "shell", "cat", dump_path], capture_output=True, text=True)
+            res = subprocess.run([".\\omniusb-farm-manager\\platform-tools\\adb.exe", "-s", serial, "shell", "cat", dump_path], capture_output=True, text=True, encoding="utf-8", errors="ignore")
             xml_data = res.stdout
             if "Crear" in xml_data and "bounds=" in xml_data:
                 import re

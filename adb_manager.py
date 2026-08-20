@@ -27,7 +27,7 @@ class ADBManager:
                     startupinfo = subprocess.STARTUPINFO()
                     startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
  
-                result = subprocess.run(base_cmd, capture_output=True, text=True, startupinfo=startupinfo, timeout=timeout)
+                result = subprocess.run(base_cmd, capture_output=True, text=True, encoding="utf-8", errors="ignore", startupinfo=startupinfo, timeout=timeout)
                 if result.returncode == 0:
                     return result.stdout.strip(), result.stderr.strip(), result.returncode
                 

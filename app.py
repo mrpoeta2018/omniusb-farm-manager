@@ -3016,8 +3016,7 @@ class ProxyFarmApp(ctk.CTk):
                                     if "featured creators" in texts or "top live categories" in texts:
                                         self.log_msg(f"🚑 Protocolo de Rescate: {serial[-4:]} se perdió en el menú de Kick. Relanzando...", "error")
                                         if hasattr(self, 'kick_textbox'):
-                                            urls = [u.strip() for u in self.kick_textbox.get("1.0", "end").strip().split('
-') if u.strip()]
+                                            urls = [u.strip() for u in self.kick_textbox.get("1.0", "end").strip().split("\n") if u.strip()]
                                             if urls:
                                                 import threading
                                                 def _rescue(s):
@@ -3437,8 +3436,6 @@ class ProxyFarmApp(ctk.CTk):
         if random.random() < 0.4:
             self._kick_chat_engine(s)
 
-    def inject_kick(self):
-    def inject_kick(self):
     def inject_kick(self):
         self.stop_social_threads = False
         if not hasattr(self, 'engine') or not getattr(self.engine, 'active_devices', []):

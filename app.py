@@ -3423,6 +3423,10 @@ class ProxyFarmApp(ctk.CTk):
         self.btn_signup_acc.pack(pady=5, fill="x", padx=30)
         self.btn_follow_artists = ctk.CTkButton(left_frame, text="🎨 4. Seguir Artistas (Opcional)", fg_color="#EC4899", hover_color="#DB2777", command=self.start_spotify_follow_artists, height=35)
         self.btn_follow_artists.pack(pady=5, fill="x", padx=30)
+        
+        self.btn_logout_acc = ctk.CTkButton(left_frame, text="🚪 5. Cerrar Sesión (A Ciegas)", fg_color="#8B5CF6", hover_color="#7C3AED", command=self.start_spotify_logout, height=35)
+        self.btn_logout_acc.pack(pady=5, fill="x", padx=30)
+        
         self.btn_stop_signup = ctk.CTkButton(left_frame, text="🛑 Detener Proceso", fg_color="#EF4444", hover_color="#DC2626", command=self.stop_spotify_signup, height=35, state="disabled")
         self.btn_stop_signup.pack(pady=5, fill="x", padx=30)
         self.stop_signup = False

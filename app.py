@@ -1352,6 +1352,37 @@ class ProxyFarmApp(ctk.CTk):
             pass
 
 
+
+    def _tap_green_play_button(self, serial):
+        """Busca el boton verde de Play en la pantalla y lo toca dinamicamente."""
+        try:
+            # Volcar la interfaz a XML
+            self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
+            out = self.adb.run_command(["shell", "cat", "/sdcard/window_dump.xml"], serial)
+            if not out: return False
+            
+            import xml.etree.ElementTree as ET
+            root = ET.fromstring(out)
+            
+            # Buscar el boton por palabras clave en cualquier idioma
+            for node in root.iter('node'):
+                desc = node.get('content-desc', '').lower()
+                # Boton verde de Spotify suele decir "Reproducir playlist", "Play playlist", "Aleatorio", etc.
+                if node.get('class') == 'android.widget.Button' and ('playlist' in desc or 'reproducir' in desc or 'play' in desc):
+                    bounds = node.get('bounds', '')
+                    import re
+                    match = re.match(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', bounds)
+                    if match:
+                        x1, y1, x2, y2 = map(int, match.groups())
+                        cx = (x1 + x2) // 2
+                        cy = (y1 + y2) // 2
+                        self.log_msg(f" [{serial}] Botn Verde Encontrado en X:{cx} Y:{cy}", "info")
+                        self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], serial)
+                        return True
+            return False
+        except Exception as e:
+            return False
+
     def _is_spotify_playing(self, serial):
         try:
             out = self.adb.run_command(["shell", "dumpsys", "media_session"], serial)

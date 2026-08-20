@@ -3676,7 +3676,7 @@ class ProxyFarmApp(ctk.CTk):
         time.sleep(2)
         
         # Tap config just in case we are on the profile panel
-        clicked_conf = self.find_and_click_by_text(serial, ["Configuración y privacidad", "Configuracion y privacidad", "Settings and privacy", "Configuración"])
+        clicked_conf = self.find_and_click_by_text(serial, ["Configuración y privacidad", "Configuracion y privacidad", "Settings and privacy"])
         if not clicked_conf:
             self.adb.run_command(["shell", "input", "tap", "500", "500"], serial)
         time.sleep(2)
@@ -3688,7 +3688,7 @@ class ProxyFarmApp(ctk.CTk):
                 found_logout = True
                 break
             else:
-                self.adb.run_command(["shell", "input", "swipe", "300", "1200", "300", "300", "500"], serial)
+                self.adb.run_command(["shell", "input", "swipe", "240", "800", "240", "200", "500"], serial)
                 time.sleep(1.5)
                 
         if found_logout:
@@ -3696,7 +3696,7 @@ class ProxyFarmApp(ctk.CTk):
             self.acc_log("3. Confirmando Cerrar Sesión...")
             if not self.find_and_click_by_text(serial, ["Cerrar sesion", "Log out", "Cerrar sesión"]):
                 # Blind tap right side for confirm
-                self.adb.run_command(["shell", "input", "tap", "750", "1200"], serial)
+                self.adb.run_command(["shell", "input", "tap", "350", "600"], serial)
             self.acc_log(f" ✅ Sesión cerrada en {serial}.", "success")
             return True
         else:

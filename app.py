@@ -3278,6 +3278,53 @@ class ProxyFarmApp(ctk.CTk):
         threading.Thread(target=_bot, daemon=True).start()
         self.log_msg("✨ Inyectando Instagram con automatización Inteligente...", "info")
 
+    def _kick_search_and_enter(self, serial, streamer_name, is_slow=False):
+        import time
+        def s_sleep(base_time):
+            time.sleep(base_time * 2.5 if is_slow else base_time)
+            
+        self.log_msg(f"🕵️ Iniciando Búsqueda Humana en Kick para: {streamer_name}...", "info")
+        
+        self._cleanup_background_apps(serial, exclude_pkg="com.kick.mobile")
+        self.adb.run_command(["shell", "am", "force-stop", "com.kick.mobile"], serial)
+        s_sleep(1.0)
+        
+        self.adb.run_command(["shell", "am", "start", "-n", "com.kick.mobile/com.kick.mobile.MainActivity"], serial)
+        self.log_msg("Esperando a que Kick cargue...", "info")
+        s_sleep(10.0)
+        
+        # 1. Dismiss survey if exists
+        self.find_and_click_by_text(serial, ["maybe later", "quizás más tarde", "omitir", "skip", "no thanks"])
+        s_sleep(2.0)
+        
+        # 2. Click Search (Lupa)
+        if not self.find_and_click_by_text(serial, ["search", "buscar"]):
+            self.log_msg("No se halló el botón buscar por texto. Usando tap ciego en menú inferior...", "warn")
+            self.adb.run_command(["shell", "input", "tap", "380", "900"], serial)
+        
+        s_sleep(3.0)
+        
+        # 3. Type streamer name
+        self.log_msg(f"Escribiendo '{streamer_name}'...", "info")
+        for char in streamer_name:
+            self.adb.run_command(["shell", "input", "text", char], serial)
+            time.sleep(0.1)
+            
+        s_sleep(2.0)
+        
+        # Press ENTER on keyboard to search
+        self.adb.run_command(["shell", "input", "keyevent", "66"], serial)
+        s_sleep(4.0)
+        
+        # 4. Click the top result
+        if not self.find_and_click_by_text(serial, [streamer_name, "live"]):
+            self.log_msg("Tap ciego en primer resultado...", "warn")
+            self.adb.run_command(["shell", "input", "tap", "240", "180"], serial)
+            
+        s_sleep(6.0)
+        self.log_msg(f"✅ Búsqueda terminada. Entrando al canal {streamer_name}.", "success")
+        return True
+
     def interact_kick_stream(self, s):
         self.log_msg(f"Buscando reglas de chat en {s}...", "info")
         import random

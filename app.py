@@ -1351,6 +1351,28 @@ class ProxyFarmApp(ctk.CTk):
         except Exception as e:
             pass
 
+
+    def _is_spotify_playing(self, serial):
+        try:
+            out = self.adb.run_command(["shell", "dumpsys", "media_session"], serial)
+            if not out: return False
+            in_spotify = False
+            for line in out.split('\n'):
+                line = line.strip()
+                if 'com.spotify.music' in line:
+                    in_spotify = True
+                elif 'package=' in line and 'com.spotify.music' not in line:
+                    in_spotify = False
+                    
+                if in_spotify and 'state=PlaybackState' in line:
+                    if 'state=3' in line:
+                        return True # PLAYING
+                    elif 'state=2' in line:
+                        return False # PAUSED
+            return False
+        except:
+            return False
+
     def _inject_playlist_to_single(self, serial, playlist_url):
         self.lock_device(serial, 40)
         

@@ -1422,37 +1422,60 @@ class ProxyFarmApp(ctk.CTk):
             return False
 
     def _inject_playlist_to_single(self, serial, playlist_url):
+        self.injection_tokens = getattr(self, 'injection_tokens', {})
         self.lock_device(serial, 40)
         
         safe_url = f"'{playlist_url.strip()}'"
         # Despertar pantalla
         self.adb.run_command(["shell", "input", "keyevent", "224"], serial)
-        # Apagar TODAS las demas apps (incluyendo Chrome) para evitar que el celular se llene de pestañas y colapse.
+        # Apagar TODAS las demas apps (incluyendo Chrome) para evitar que el celular se llene de pestaas y colapse.
         # Excluimos Spotify para que no pierda la MediaSession.
         self._cleanup_background_apps(serial, exclude_pkg="com.spotify.music")
-        s_sleep(2.0)
+        
+        import time
+        time.sleep(2.0)
+        
+        token = str(time.time())
+        self.injection_tokens[serial] = token
         
         # Iniciar Spotify con la URL (forzando que el paquete sea Spotify)
         self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", safe_url, "com.spotify.music"], serial)
         
-        def delayed_play(s=serial):
-            # Esperar a que cargue la interfaz
-            time.sleep(15)
-            
-            self.log_msg(f"📱 [{s}] Dando Play a la lista principal (Modo Normal)...", "info")
-            # Tocar el botón Play Verde de la lista (Mucho más confiable que el keyevent 126 que a veces resume la canción anterior)
-            self.adb.run_command(["shell", "input", "tap", "632", "898"], s)
-            time.sleep(3)
-            
-            # Tocar la primera canción de la lista por seguridad (esto fuerza a que la lista empiece sí o sí)
-            self.adb.run_command(["shell", "input", "tap", "360", "1000"], s)
-            time.sleep(5)
-            
-            # Esperar 60 segundos adicionales para saltar cualquier anuncio largo de Spotify
-            time.sleep(60)
-            self.adb.run_command(["shell", "input", "keyevent", "87"], s)
-        threading.Thread(target=delayed_play, daemon=True).start()
+        def delayed_play(s=serial, t=token):
+            def is_cancelled():
+                if getattr(self, "stop_social_threads", False): return True
+                if self.injection_tokens.get(s) != t: return True
+                return False
 
+            # 1. Espera inicial (15 seg)
+            for _ in range(15):
+                if is_cancelled(): return
+                time.sleep(1)
+                
+            # 2. INTENTO VIP: Tocar Guardar y Botn Verde
+            self.log_msg(f" [{s}] [VIP] Escaneando Botn Guardar y Play...", "info")
+            green_tapped = getattr(self, '_tap_green_play_button', lambda x: False)(s)
+            
+            if not green_tapped:
+                self.log_msg(f" [{s}] [VIP] Botn no visible. Usando fallback (126)...", "warn")
+                if not getattr(self, '_is_spotify_playing', lambda x: False)(s):
+                    self.adb.run_command(["shell", "input", "keyevent", "126"], s)
+            
+            # 3. Espera Larga (60s) para dejar pasar anuncios dobles
+            self.log_msg(f" [{s}] [VIP] Esperando 60s por posibles anuncios...", "info")
+            for _ in range(60):
+                if is_cancelled(): return
+                time.sleep(1)
+            
+            # 4. Anlisis Inteligente Final
+            if not getattr(self, '_is_spotify_playing', lambda x: False)(s):
+                self.log_msg(f" [{s}] [VIP] Sigue sin reproducir. Adelantando (87)...", "warn")
+                self.adb.run_command(["shell", "input", "keyevent", "87"], s)
+            else:
+                self.log_msg(f" [{s}] [VIP] Spotify Reproduciendo correctamente. Todo en orden.", "success")
+
+        import threading
+        threading.Thread(target=delayed_play, daemon=True).start()
     def _inject_playlist_to_active(self, playlist_url):
         if not hasattr(self, 'engine') or not getattr(self.engine, 'active_devices', []):
             return
@@ -1605,6 +1628,7 @@ class ProxyFarmApp(ctk.CTk):
     def inject_manual_apl(self): self._inject_mass_generic(self.apl_textbox, "Apple Music", "com.apple.android.music")
 
     def _inject_youtube_to_single(self, serial, url):
+        self.injection_tokens = getattr(self, 'injection_tokens', {})
         self.lock_device(serial, 40)
         
         # 1. Limpiar parmetros de rastreo que causan error de "Sin conexin" en la app

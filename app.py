@@ -1407,6 +1407,134 @@ class ProxyFarmApp(ctk.CTk):
                 
         return False
 
+    def _is_spotify_playing(self, serial):
+        try:
+            out = self.adb.run_command(["shell", "dumpsys", "media_session"], serial)
+            if not out: return False
+            in_spotify = False
+            for line in out.split('\n'):
+                line = line.strip()
+                if 'com.spotify.music' in line:
+                    in_spotify = True
+                elif 'package=' in line and 'com.spotify.music' not in line:
+                    in_spotify = False
+                    
+                if in_spotify and 'state=PlaybackState' in line:
+                    if 'state=3' in line:
+                        return True # PLAYING
+                    elif 'state=2' in line:
+                        return False # PAUSED
+            return False
+        except:
+            return False
+
+    def _inject_playlist_to_single(self, serial, playlist_url):
+        self.injection_tokens = getattr(self, 'injection_tokens', {})
+        self.lock_device(serial, 40)
+        
+        safe_url = f"'{playlist_url.strip()}'"
+        # Despertar pantalla
+        self.adb.run_command(["shell", "input", "keyevent", "224"], serial)
+        # Apagar TODAS las demas apps (incluyendo Chrome) para evitar que el celular se llene de pestaas y colapse.
+        # Excluimos Spotify para que no pierda la MediaSession.
+        self._cleanup_background_apps(serial, exclude_pkg="com.spotify.music")
+        
+        import time
+        time.sleep(2.0)
+        
+        token = str(time.time())
+        self.injection_tokens[serial] = token
+        
+        # Iniciar Spotify con la URL (forzando que el paquete sea Spotify)
+        self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", safe_url, "com.spotify.music"], serial)
+        
+        def delayed_play(s=serial, t=token):
+            def is_cancelled():
+                if getattr(self, "stop_social_threads", False): return True
+                if self.injection_tokens.get(s) != t: return True
+                return False
+
+            # 1. Espera inicial (15 seg)
+            for _ in range(15):
+                if is_cancelled(): return
+                time.sleep(1)
+                
+            # 2. INTENTO VIP: Tocar Guardar y Botn Verde
+            self.log_msg(f" [{s}] [VIP] Escaneando Botn Guardar y Play...", "info")
+            green_tapped = getattr(self, '_tap_green_play_button', lambda x: False)(s)
+            
+            if not green_tapped:
+                self.log_msg(f" [{s}] [VIP] Botn no visible. Usando fallback (126)...", "warn")
+                if not getattr(self, '_is_spotify_playing', lambda x: False)(s):
+                    self.adb.run_command(["shell", "input", "keyevent", "126"], s)
+            
+            # 3. Espera Larga (60s) para dejar pasar anuncios dobles
+            self.log_msg(f" [{s}] [VIP] Esperando 60s por posibles anuncios...", "info")
+            for _ in range(60):
+                if is_cancelled(): return
+                time.sleep(1)
+            
+            # 4. Anlisis Inteligente Final
+            if not getattr(self, '_is_spotify_playing', lambda x: False)(s):
+                self.log_msg(f" [{s}] [VIP] Sigue sin reproducir. Adelantando (87)...", "warn")
+                self.adb.run_command(["shell", "input", "keyevent", "87"], s)
+            else:
+                self.log_msg(f" [{s}] [VIP] Spotify Reproduciendo correctamente. Todo en orden.", "success")
+
+        import threading
+        threading.Thread(target=delayed_play, daemon=True).start()
+    def _inject_playlist_to_active(self, playlist_url):
+        if not hasattr(self, 'engine') or not getattr(self.engine, 'active_devices', []):
+            return
+            
+        def _mass_inject():
+            def worker(dev_serial, delay):
+                time.sleep(delay)
+                # Exploracion profunda opcional ANTES de la lista principal
+                # Lógica del Menú de Modos de Spotify
+                mode = getattr(self, 'spotify_mode_var', None) and self.spotify_mode_var.get() or "Normal"
+                
+                if mode == "Explorar Artistas":
+                    self._explore_spotify_artists(dev_serial, playlist_url)
+                    self._inject_playlist_to_single(dev_serial, playlist_url)
+                elif mode == "Clonar Copia":
+                    self._clone_and_play_playlist(dev_serial, playlist_url)
+                else:
+                    # Normal
+                    self._inject_playlist_to_single(dev_serial, playlist_url)
+                
+            threads = []
+            for i, dev in enumerate(self.engine.active_devices):
+                delay = i * 1.5
+                mode = getattr(self, 'spotify_mode_var', None) and self.spotify_mode_var.get() or "Normal"
+                if mode == "Clonar Copia":
+                    delay = i * 45.0
+                t = threading.Thread(target=worker, args=(dev['serial'], delay), daemon=True)
+                t.start()
+                threads.append(t)
+                
+        threading.Thread(target=_mass_inject, daemon=True).start()
+
+    def update_playlist_ui(self, *args):
+        pass
+
+    def update_playlist_combo(self, *args):
+        pass
+
+    def clear_yt_music_cache(self):
+        devices = self.get_selected_devices()
+        if not devices:
+            self.log_msg("⚠️ Selecciona dispositivos en la pestaña principal primero.", "warn")
+            return
+            
+        def _clear():
+            self.log_msg(f"🧹 Limpiando Caché de YT Music en {len(devices)} dispositivos...", "warn")
+            for dev in devices:
+                self.adb.run_command(["shell", "pm", "clear", "com.google.android.apps.youtube.music"], dev['serial'])
+            self.after(0, lambda: self.log_msg("✅ Limpieza de Caché de YT Music completada.", "info"))
+            
+        threading.Thread(target=_clear, daemon=True).start()
+
     def install_custom_apk(self, apk_filename, display_name):
         devices = self.get_selected_devices()
         if not devices:

@@ -3661,47 +3661,49 @@ class ProxyFarmApp(ctk.CTk):
             self.after(0, lambda: self.btn_stop_signup.configure(state="disabled"))
 
     def _spotify_logout_thread(self, serial):
+        self.acc_log(f"Iniciando cierre de sesión en {serial}...")
+
         import time
-        self.acc_log("Abriendo Spotify para Cerrar Sesión...")
-        self.adb.run_command(["shell", "am", "force-stop", "com.spotify.music"], serial)
-        time.sleep(2)
-        self.adb.run_command(["shell", "am", "start", "-n", "com.spotify.music/.MainActivity"], serial)
-        time.sleep(6)
-        
-        self.acc_log("1. Buscando el Perfil / Configuración...")
-        # Sometimes opening Spotify lands on an ad, or settings directly. We just do blind tap top left if not found.
-        clicked = self.find_and_click_by_text(serial, ["Ir a perfil", "Perfil", "Configuracion y privacidad", "Settings", "Profile"])
-        if not clicked:
-            self.adb.run_command(["shell", "input", "tap", "80", "120"], serial) # Top left corner
-        time.sleep(2)
-        
-        # Tap config just in case we are on the profile panel
-        clicked_conf = self.find_and_click_by_text(serial, ["Configuración y privacidad", "Configuracion y privacidad", "Settings and privacy"])
-        if not clicked_conf:
-            self.adb.run_command(["shell", "input", "tap", "500", "500"], serial)
-        time.sleep(2)
-        
-        self.acc_log("2. Buscando botón de Cerrar Sesión (Scroll down)...")
-        found_logout = False
-        for i in range(15): # Scroll down multiple times
-            if self.find_and_click_by_text(serial, ["Cerrar sesion", "Log out", "Cerrar sesión"]):
-                found_logout = True
-                break
-            else:
-                self.adb.run_command(["shell", "input", "swipe", "240", "800", "240", "200", "500"], serial)
-                time.sleep(1.5)
-                
-        if found_logout:
+        self.acc_log("Retrocediendo al Inicio (Back button)...")
+        for i in range(10):
+            root = self.pull_and_parse(serial)
+            if root is not None:
+                texts = [node.get('content-desc', '').lower() for node in root.iter('node')]
+                if any('ir a perfil y configuraci' in t for t in texts):
+                    break
+            self.adb.run_command(["shell", "input", "keyevent", "4"], serial)
             time.sleep(1.5)
-            self.acc_log("3. Confirmando Cerrar Sesión...")
-            if not self.find_and_click_by_text(serial, ["Cerrar sesion", "Log out", "Cerrar sesión"]):
-                # Blind tap right side for confirm
-                self.adb.run_command(["shell", "input", "tap", "350", "600"], serial)
-            self.acc_log(f" ✅ Sesión cerrada en {serial}.", "success")
-            return True
-        else:
-            self.acc_log(f" ❌ No se encontró 'Cerrar sesión' en {serial}.", "error")
-            return False
+
+        self.acc_log("1. Abriendo Perfil...")
+        for i in range(5):
+            self.adb.run_command(["shell", "input", "tap", "40", "60"], serial)
+            time.sleep(2)
+            root = self.pull_and_parse(serial)
+            if root is not None:
+                texts = [node.get('text', '').lower() + node.get('content-desc', '').lower() for node in root.iter('node')]
+                if any('configuraci' in t and 'privacidad' in t for t in texts):
+                    break
+
+        self.acc_log("2. Entrando a Configuracion...")
+        self.find_and_click_by_text(serial, ["Configuración y privacidad", "Configuracion y privacidad", "Settings and privacy"])
+        time.sleep(3)
+
+        self.acc_log("3. Scrolleando al fondo...")
+        for _ in range(7):
+            self.adb.run_command(["shell", "input", "swipe", "240", "700", "240", "200", "1000"], serial)
+            time.sleep(1)
+
+        self.acc_log("4. Tap Cerrar Sesion...")
+        if not self.find_and_click_by_text(serial, ["Cerrar sesi", "Log out"]):
+            self.adb.run_command(["shell", "input", "tap", "240", "660"], serial)
+        time.sleep(2)
+
+        self.acc_log("5. Confirmando...")
+        self.adb.run_command(["shell", "input", "tap", "350", "550"], serial)
+        time.sleep(3)
+        
+        self.acc_log(f" ✅ Sesión cerrada en {serial}.", "success")
+        return True
 
     def stop_spotify_signup(self):
         self.stop_signup = True

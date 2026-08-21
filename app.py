@@ -3219,7 +3219,9 @@ class ProxyFarmApp(ctk.CTk):
             self.log_msg("⚠️ El túnel no está iniciado.", "warn")
             return
         urls = [u.strip() for u in self.ig_textbox.get("1.0", "end").strip().split('\n') if u.strip()]
-        if not urls: return
+        if not urls:
+            self.log_msg("⚠️ La caja de texto de Kick está vacía. Pega un link primero.", "warn")
+            return
         import random
         import re
         
@@ -3442,7 +3444,9 @@ class ProxyFarmApp(ctk.CTk):
             self.log_msg("⚠️ El túnel no está iniciado.", "warn")
             return
         urls = [u.strip() for u in self.kick_textbox.get("1.0", "end").strip().split('\n') if u.strip()]
-        if not urls: return
+        if not urls:
+            self.log_msg("⚠️ La caja de texto de Kick está vacía. Pega un link primero.", "warn")
+            return
         import random
         def _bot():
             for dev in self.engine.active_devices:

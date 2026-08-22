@@ -3739,11 +3739,19 @@ class ProxyFarmApp(ctk.CTk):
                 s_sleep(6)
                 
                 # Clic "Iniciar sesion"
-                self.adb.run_command(["shell", "input", "tap", "240", "790"], serial)
+                click_login = self.find_and_click_by_text(serial, ["Iniciar sesión", "Log in", "Iniciar sesi"])
+                if not click_login:
+                    self.acc_log(f" [{serial}] No se vio 'Iniciar sesión', toque de respaldo...", "warn")
+                    # Toque en la zona baja inferior (donde suele estar en pantallas grandes)
+                    self.adb.run_command(["shell", "input", "tap", "540", "1800"], serial)
                 s_sleep(3)
                 
                 # Clic "Google"
-                self.adb.run_command(["shell", "input", "tap", "240", "560"], serial)
+                click_google = self.find_and_click_by_text(serial, ["Google", "Continuar con Google"])
+                if not click_google:
+                    self.acc_log(f" [{serial}] No se vio 'Google', toque de respaldo...", "warn")
+                    self.adb.run_command(["shell", "input", "tap", "540", "1200"], serial)
+                
                 s_sleep(8) # Dar tiempo a que google cargue
                 
                 # Volcar UI para encontrar los correos y tocar el indice actual

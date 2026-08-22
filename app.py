@@ -3165,6 +3165,7 @@ class ProxyFarmApp(ctk.CTk):
                 self.log_msg(f"Abriendo IG: {username} en {s}...")
                 
                 # Cierra otras apps y refresca IG
+                self._force_portrait(s)
                 self._cleanup_background_apps(s, exclude_pkg="com.instagram.android")
                 self.adb.run_command(["shell", "am", "force-stop", "com.instagram.android"], s)
                 time.sleep(1)

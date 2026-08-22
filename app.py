@@ -961,113 +961,22 @@ class ProxyFarmApp(ctk.CTk):
         self.is_injecting = False
 
     def _trigger_auto_spotify(self):
-        playlists = [p.strip() for p in self.playlist_textbox.get("1.0", "end").strip().split('\n') if p.strip()]
-        if playlists:
+        playlists = [p.strip() for p in getattr(self, 'playlist_textbox', type('obj', (object,), {'get': lambda *a: ''})()).get("1.0", "end").strip().split(chr(10)) if p.strip()]
+        tracks = [t.strip() for t in getattr(self, 'tracks_textbox', type('obj', (object,), {'get': lambda *a: ''})()).get("1.0", "end").strip().split(chr(10)) if t.strip()]
+        
+        target_list = playlists if playlists else tracks
+        if target_list:
             if not hasattr(self, 'rot_index_spotify'): self.rot_index_spotify = 0
-            self.rot_index_spotify = self.rot_index_spotify % len(playlists)
-            current = playlists[self.rot_index_spotify]
+            self.rot_index_spotify = self.rot_index_spotify % len(target_list)
+            current = target_list[self.rot_index_spotify]
             self.rot_index_spotify += 1
-            
-            self.after(0, lambda p=current: self.log_msg(f"🎧 [AUTO] Inyectando Spotify: {p[:30]}...", "info"))
-            self._inject_playlist_to_active(current)
 
-    def _trigger_auto_yt_music(self):
-        urls = [p.strip() for p in self.ytmusic_textbox.get("1.0", "end").strip().split('\n') if p.strip()]
-        if urls:
-            if not hasattr(self, 'rot_index_ytmusic'): self.rot_index_ytmusic = 0
-            self.rot_index_ytmusic = self.rot_index_ytmusic % len(urls)
-            current = urls[self.rot_index_ytmusic]
-            self.rot_index_ytmusic += 1
-            
-            self.after(0, lambda u=current: self.log_msg(f"🟣 [AUTO] Inyectando YT Music: {u[:30]}...", "info"))
-            self._inject_youtube_to_active(current)
-            
-    def _trigger_auto_yt_video(self):
-        urls = [p.strip() for p in self.youtube_textbox.get("1.0", "end").strip().split('\n') if p.strip()]
-        if urls:
-            if not hasattr(self, 'rot_index_ytvideo'): self.rot_index_ytvideo = 0
-            self.rot_index_ytvideo = self.rot_index_ytvideo % len(urls)
-            current = urls[self.rot_index_ytvideo]
-            self.rot_index_ytvideo += 1
-            
-            if self.youtube_drip_var.get():
-                if hasattr(self, 'engine') and self.engine.active_devices:
-                    import random
-                    dev = random.choice(self.engine.active_devices)
-                    self.after(0, lambda d=dev['serial'][-4:], u=current: self.log_msg(f"💧 Goteo YT Video en {d}: {u[:30]}...", "info"))
-                    self._inject_youtube_to_single(dev['serial'], current)
-            else:
-                self.after(0, lambda u=current: self.log_msg(f"🔴 [AUTO] Inyectando YT Video Masivo: {u[:30]}...", "info"))
-                self._inject_youtube_to_active(current)
-
-    def _trigger_auto_mixed(self):
-        playlists_raw = self.playlist_textbox.get("1.0", "end").strip().split('\n')
-        spot_urls = [p.strip() for p in playlists_raw if p.strip()]
-        
-        ytm_raw = self.ytmusic_textbox.get("1.0", "end").strip().split('\n')
-        ytm_urls = [p.strip() for p in ytm_raw if p.strip()]
-        
-        yt_raw = self.youtube_textbox.get("1.0", "end").strip().split('\n')
-        yt_urls = [p.strip() for p in yt_raw if p.strip()]
-        
-        awa_urls = [p.strip() for p in (self.awa_textbox.get("1.0", "end").strip().split('\n') if hasattr(self, 'awa_textbox') else []) if p.strip()]
-        sc_urls = [p.strip() for p in (self.sc_textbox.get("1.0", "end").strip().split('\n') if hasattr(self, 'sc_textbox') else []) if p.strip()]
-        pan_urls = [p.strip() for p in (self.pan_textbox.get("1.0", "end").strip().split('\n') if hasattr(self, 'pan_textbox') else []) if p.strip()]
-        am_urls = [p.strip() for p in (self.am_textbox.get("1.0", "end").strip().split('\n') if hasattr(self, 'am_textbox') else []) if p.strip()]
-        apl_urls = [p.strip() for p in (self.apl_textbox.get("1.0", "end").strip().split('\n') if hasattr(self, 'apl_textbox') else []) if p.strip()]
-        
-        active_pools = []
-        if spot_urls and (not hasattr(self, 'use_spotify') or self.use_spotify.get()): active_pools.append(("spotify", spot_urls))
-        if ytm_urls and (not hasattr(self, 'use_ytmusic') or self.use_ytmusic.get()): active_pools.append(("yt_music", ytm_urls))
-        if yt_urls and (not hasattr(self, 'use_ytvideo') or self.use_ytvideo.get()): active_pools.append(("yt_video", yt_urls))
-        if awa_urls and (not hasattr(self, 'use_awa') or self.use_awa.get()): active_pools.append(("awa", awa_urls, "fm.awa.app"))
-        if sc_urls and (not hasattr(self, 'use_sc') or self.use_sc.get()): active_pools.append(("soundcloud", sc_urls, "com.soundcloud.android"))
-        if pan_urls and (not hasattr(self, 'use_pan') or self.use_pan.get()): active_pools.append(("pandora", pan_urls, "com.pandora.android"))
-        if am_urls and (not hasattr(self, 'use_am') or self.use_am.get()): active_pools.append(("audiomack", am_urls, "com.audiomack"))
-        if apl_urls and (not hasattr(self, 'use_apl') or self.use_apl.get()): active_pools.append(("applemusic", apl_urls, "com.apple.android.music"))
-        
-        if len(active_pools) < 2:
-            self.log_msg("⚠️ [AUTO MIXTO] Necesitas tener al menos DOS cajas activadas y con enlaces.", "warn")
-            return
-            
-        if hasattr(self, 'engine') and self.engine.active_devices:
-            self.log_msg(f"⚖️ [AUTO MIXTO] Dividiendo la granja en {len(active_pools)} plataformas...", "info")
-            import random
-            
             def _mass_inject():
-                # Randomize devices so they don't always get the same platform on every rotation
-                devices = list(self.engine.active_devices)
-                random.shuffle(devices)
-                
-                for i, dev in enumerate(devices):
-                    pool_data = active_pools[i % len(active_pools)]
-                    pool_type = pool_data[0]
-                    pool_urls = pool_data[1]
-                    
-                    if pool_type == "spotify":
-                        if not hasattr(self, 'rot_index_spotify'): self.rot_index_spotify = 0
-                        self.rot_index_spotify = self.rot_index_spotify % len(pool_urls)
-                        rnd_url = pool_urls[self.rot_index_spotify]
-                        self.rot_index_spotify += 1
-                        self._inject_playlist_to_single(dev['serial'], rnd_url)
-                    elif pool_type == "yt_music":
-                        if not hasattr(self, 'rot_index_ytmusic'): self.rot_index_ytmusic = 0
-                        self.rot_index_ytmusic = self.rot_index_ytmusic % len(pool_urls)
-                        rnd_url = pool_urls[self.rot_index_ytmusic]
-                        self.rot_index_ytmusic += 1
-                        self._inject_youtube_to_single(dev['serial'], rnd_url)
-                    elif pool_type == "yt_video":
-                        if not hasattr(self, 'rot_index_ytvideo'): self.rot_index_ytvideo = 0
-                        self.rot_index_ytvideo = self.rot_index_ytvideo % len(pool_urls)
-                        rnd_url = pool_urls[self.rot_index_ytvideo]
-                        self.rot_index_ytvideo += 1
-                        self._inject_youtube_to_single(dev['serial'], rnd_url)
-                    else:
-                        package = pool_data[2]
-                        rnd_url = random.choice(pool_urls)
-                        self._inject_generic_audio_to_single(dev['serial'], rnd_url, package)
-                        
-                    s_sleep(1.5)
+                for dev in getattr(self.engine, 'active_devices', []):
+                    if getattr(self, "stop_social_threads", False): break
+                    self._inject_playlist_to_single(dev['serial'], current)
+                self._finalize_injection()
+            import threading
             threading.Thread(target=_mass_inject, daemon=True).start()
 
     def inject_manual_playlist(self):
@@ -3032,7 +2941,12 @@ class ProxyFarmApp(ctk.CTk):
                                 # Trigger re-injection
                                 if self.master_mode.get() == "spotify":
                                     playlists = [p.strip() for p in self.playlist_textbox.get("1.0", "end").strip().split('\n') if p.strip()]
-                                    if playlists: self._inject_playlist_to_single(serial, random.choice(playlists))
+                                    tracks = [t.strip() for t in getattr(self, 'tracks_textbox', type('obj', (object,), {'get': lambda *a: ''})()).get("1.0", "end").strip().split('\n') if t.strip()]
+                                    if playlists: 
+                                        self._inject_playlist_to_single(serial, random.choice(playlists))
+                                    elif tracks:
+                                        if hasattr(self, '_track_timers'): self._track_timers[serial] = __import__('time').time()
+                                        self._inject_playlist_to_single(serial, random.choice(tracks))
                                 elif self.master_mode.get() == "youtube":
                                     urls = [p.strip() for p in self.youtube_textbox.get("1.0", "end").strip().split('\n') if p.strip()]
                                     if urls: self._inject_youtube_to_single(serial, random.choice(urls))

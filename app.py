@@ -3745,8 +3745,18 @@ class ProxyFarmApp(ctk.CTk):
                 self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
                 check_out, _, _ = self.adb.run_command(["shell", "cat", "/sdcard/window_dump.xml"], serial)
                 
-                if "Inicio, Pesta" in check_out or "Buscar, Pesta" in check_out or "Tu biblioteca, Pesta" in check_out:
+                if "Inicio, Pesta" in check_out or "Buscar, Pesta" in check_out or "Tu biblioteca, Pesta" in check_out or "Permitir actividad en segundo plano" in check_out or "Ahora no" in check_out:
                     self.acc_log(f" [{serial}] LOGIN CON GOOGLE EXITOSO! ({target_email})", "success")
+                    
+                    if "Ahora no" in check_out:
+                        match = re.search(r'text="Ahora no".*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', check_out)
+                        if match:
+                            ax1, ay1, ax2, ay2 = map(int, match.groups())
+                            acx = (ax1 + ax2) // 2
+                            acy = (ay1 + ay2) // 2
+                            self.adb.run_command(["shell", "input", "tap", str(acx), str(acy)], serial)
+                            s_sleep(2)
+
                     # Lanzar cancion para empezar a farmear
                     if hasattr(self, 'playlist_textbox'):
                         playlists = [p.strip() for p in self.playlist_textbox.get("1.0", "end").strip().split(chr(10)) if p.strip()]

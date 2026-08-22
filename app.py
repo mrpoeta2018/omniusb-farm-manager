@@ -3699,6 +3699,10 @@ class ProxyFarmApp(ctk.CTk):
         import threading
         threading.Thread(target=self._master_scan_sessions_thread, args=(selected,), daemon=True).start()
 
+    def _force_portrait(self, serial):
+        self.adb.run_command(["shell", "settings", "put", "system", "accelerometer_rotation", "0"], serial)
+        self.adb.run_command(["shell", "settings", "put", "system", "user_rotation", "0"], serial)
+
     def _master_scan_sessions_thread(self, selected):
         import time
         import re
@@ -3711,6 +3715,7 @@ class ProxyFarmApp(ctk.CTk):
                 
         for idx, serial in enumerate(selected):
             self.acc_log(f"--- [Escaner {idx+1}/{len(selected)}] {serial} ---", "info")
+            self._force_portrait(serial)
             self.adb.run_command(["shell", "monkey", "-p", "com.spotify.music", "-c", "android.intent.category.LAUNCHER", "1"], serial)
             time.sleep(5)
             self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
@@ -3802,6 +3807,7 @@ class ProxyFarmApp(ctk.CTk):
             
             # --- SMART PRE-CHECK (PROTECCION DE CUENTA) ---
             self.acc_log(f" [{serial}] Verificando si ya tiene cuenta activa...", "info")
+            self._force_portrait(serial)
             self.adb.run_command(["shell", "monkey", "-p", "com.spotify.music", "-c", "android.intent.category.LAUNCHER", "1"], serial)
             s_sleep(4.0)
             self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)

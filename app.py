@@ -3709,24 +3709,6 @@ class ProxyFarmApp(ctk.CTk):
                 slept += 0.5
 
         try:
-            # --- PRE-CHECK: ESTA YA LOGUEADO? ---
-            self.acc_log(f" [{serial}] Verificando si ya está logueado...", "info")
-            self.adb.run_command(["shell", "monkey", "-p", "com.spotify.music", "-c", "android.intent.category.LAUNCHER", "1"], serial)
-            s_sleep(5)
-            self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
-            pre_check, _, _ = self.adb.run_command(["shell", "cat", "/sdcard/window_dump.xml"], serial)
-            if "Inicio, Pesta" in pre_check or "Buscar, Pesta" in pre_check or "Tu biblioteca, Pesta" in pre_check or "Permitir actividad en segundo plano" in pre_check or "Ahora no" in pre_check:
-                self.acc_log(f" [{serial}] YA ESTABA LOGUEADO. Saltando.", "success")
-                if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
-                    self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ✅", text_color="#10B981"))
-                self._save_account_memory(serial, "Desconocido (Ya estaba logueado)", "Google/Pre-check")
-                if "Ahora no" in pre_check:
-                    match = re.search(r'text="Ahora no".*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', pre_check)
-                    if match:
-                        ax1, ay1, ax2, ay2 = map(int, match.groups())
-                        self.adb.run_command(["shell", "input", "tap", str((ax1 + ax2) // 2), str((ay1 + ay2) // 2)], serial)
-                return
-
             self.acc_log(f" [{serial}] Iniciando proceso de Login con Google...", "info")
             
             # Vamos a iterar hasta 5 veces (por si hay 5 correos)
@@ -4118,24 +4100,6 @@ class ProxyFarmApp(ctk.CTk):
                 slept += 0.5
             
         try:
-            # --- PRE-CHECK: ESTA YA LOGUEADO? ---
-            self.acc_log(f" [{serial}] Verificando si ya está logueado...", "info")
-            self.adb.run_command(["shell", "monkey", "-p", "com.spotify.music", "-c", "android.intent.category.LAUNCHER", "1"], serial)
-            s_sleep(5)
-            self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
-            pre_check, _, _ = self.adb.run_command(["shell", "cat", "/sdcard/window_dump.xml"], serial)
-            if "Inicio, Pesta" in pre_check or "Buscar, Pesta" in pre_check or "Tu biblioteca, Pesta" in pre_check or "Permitir actividad en segundo plano" in pre_check or "Ahora no" in pre_check:
-                self.acc_log(f" [{serial}] YA ESTABA LOGUEADO. Saltando.", "success")
-                if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
-                    self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ✅", text_color="#10B981"))
-                self._save_account_memory(serial, "Desconocido (Ya estaba logueado)", "A ciegas/Pre-check")
-                if "Ahora no" in pre_check:
-                    match = re.search(r'text="Ahora no".*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', pre_check)
-                    if match:
-                        ax1, ay1, ax2, ay2 = map(int, match.groups())
-                        self.adb.run_command(["shell", "input", "tap", str((ax1 + ax2) // 2), str((ay1 + ay2) // 2)], serial)
-                return
-
             self.acc_log(f"🚀 Iniciando Registro App en {serial} (A Ciegas)", "success")
             self.acc_log(f"Correo Nuevo: {email}")
             self.acc_log(f"Clave: {pwd}")
@@ -4162,9 +4126,17 @@ class ProxyFarmApp(ctk.CTk):
                 p_text = " ".join([n.get("text", "") for n in root.iter()]).lower()
                 p_desc = " ".join([n.get("content-desc", "") for n in root.iter()]).lower()
                 full_text = p_text + " " + p_desc
-                if "inicio" in full_text or "tu biblioteca" in full_text or "home" in full_text or "your library" in full_text:
-                    self.acc_log("❌ ¡Alto! La app ya tiene una cuenta iniciada. Abortando registro.", "error")
-                    return False
+                if "inicio" in full_text or "tu biblioteca" in full_text or "home" in full_text or "your library" in full_text or "permitir actividad en segundo plano" in full_text or "ahora no" in full_text:
+                    self.acc_log(f" [{serial}] YA ESTABA LOGUEADO. Saltando.", "success")
+                    if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
+                        self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ✅", text_color="#10B981"))
+                    self._save_account_memory(serial, "Desconocido (Ya estaba logueado)", "A ciegas/Pre-check")
+                    if "ahora no" in full_text:
+                        match = re.search(r'text="ahora no".*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', full_text)
+                        if match:
+                            ax1, ay1, ax2, ay2 = map(int, match.groups())
+                            self.adb.run_command(["shell", "input", "tap", str((ax1 + ax2) // 2), str((ay1 + ay2) // 2)], serial)
+                    return True
             except:
                 pass
             

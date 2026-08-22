@@ -3757,6 +3757,7 @@ class ProxyFarmApp(ctk.CTk):
             self.acc_log(f"--- [Dispositivo {idx+1}/{len(selected)}] {serial} ---", "info")
             # Bloquear giroscopio
             self.adb.run_command(["shell", "settings", "put", "system", "accelerometer_rotation", "0"], serial)
+            self.adb.run_command(["shell", "settings", "put", "system", "user_rotation", "0"], serial)
             
             try:
                 self._spotify_google_login_thread(serial)

@@ -3669,6 +3669,18 @@ class ProxyFarmApp(ctk.CTk):
             
         self.after(0, lambda: self.btn_start_acc.configure(state="normal", text="🌐 1. Abrir Registro Chrome (Visible)"))
 
+
+    def _save_account_memory(self, serial, email, source="Blind"):
+        import datetime
+        import os
+        try:
+            filename = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Cuentas_Creadas.txt")
+            now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            with open(filename, "a", encoding="utf-8") as file:
+                file.write(f"[{now}] Dispositivo: {serial} | Correo: {email} | Tipo: {source}\n")
+        except Exception as e:
+            self.log_msg(f"Error guardando memoria: {e}", "error")
+
     def start_spotify_google_login(self):
         selected = [s for s, v in self.acc_device_vars.items() if v.get()]
         if not selected:
@@ -3697,6 +3709,24 @@ class ProxyFarmApp(ctk.CTk):
                 slept += 0.5
 
         try:
+            # --- PRE-CHECK: ESTA YA LOGUEADO? ---
+            self.acc_log(f" [{serial}] Verificando si ya está logueado...", "info")
+            self.adb.run_command(["shell", "monkey", "-p", "com.spotify.music", "-c", "android.intent.category.LAUNCHER", "1"], serial)
+            s_sleep(5)
+            self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
+            pre_check, _, _ = self.adb.run_command(["shell", "cat", "/sdcard/window_dump.xml"], serial)
+            if "Inicio, Pesta" in pre_check or "Buscar, Pesta" in pre_check or "Tu biblioteca, Pesta" in pre_check or "Permitir actividad en segundo plano" in pre_check or "Ahora no" in pre_check:
+                self.acc_log(f" [{serial}] YA ESTABA LOGUEADO. Saltando.", "success")
+                if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
+                    self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ✅", text_color="#10B981"))
+                self._save_account_memory(serial, "Desconocido (Ya estaba logueado)", "Google/Pre-check")
+                if "Ahora no" in pre_check:
+                    match = re.search(r'text="Ahora no".*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', pre_check)
+                    if match:
+                        ax1, ay1, ax2, ay2 = map(int, match.groups())
+                        self.adb.run_command(["shell", "input", "tap", str((ax1 + ax2) // 2), str((ay1 + ay2) // 2)], serial)
+                return
+
             self.acc_log(f" [{serial}] Iniciando proceso de Login con Google...", "info")
             
             # Vamos a iterar hasta 5 veces (por si hay 5 correos)
@@ -3729,6 +3759,8 @@ class ProxyFarmApp(ctk.CTk):
                     
                 if email_index >= len(matches):
                     self.acc_log(f" [{serial}] Todos los {len(matches)} correos de Google fallaron.", "error")
+                    if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
+                        self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ❌", text_color="#EF4444"))
                     break
                     
                 target_email = matches[email_index][0]
@@ -3747,6 +3779,9 @@ class ProxyFarmApp(ctk.CTk):
                 
                 if "Inicio, Pesta" in check_out or "Buscar, Pesta" in check_out or "Tu biblioteca, Pesta" in check_out or "Permitir actividad en segundo plano" in check_out or "Ahora no" in check_out:
                     self.acc_log(f" [{serial}] LOGIN CON GOOGLE EXITOSO! ({target_email})", "success")
+                    if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
+                        self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ✅", text_color="#10B981"))
+                    self._save_account_memory(serial, target_email, "Google Auto")
                     
                     if "Ahora no" in check_out:
                         match = re.search(r'text="Ahora no".*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', check_out)
@@ -4075,6 +4110,23 @@ class ProxyFarmApp(ctk.CTk):
                 slept += 0.5
             
         try:
+            # --- PRE-CHECK: ESTA YA LOGUEADO? ---
+            self.acc_log(f" [{serial}] Verificando si ya está logueado...", "info")
+            self.adb.run_command(["shell", "monkey", "-p", "com.spotify.music", "-c", "android.intent.category.LAUNCHER", "1"], serial)
+            s_sleep(5)
+            self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
+            pre_check, _, _ = self.adb.run_command(["shell", "cat", "/sdcard/window_dump.xml"], serial)
+            if "Inicio, Pesta" in pre_check or "Buscar, Pesta" in pre_check or "Tu biblioteca, Pesta" in pre_check or "Permitir actividad en segundo plano" in pre_check or "Ahora no" in pre_check:
+                self.acc_log(f" [{serial}] YA ESTABA LOGUEADO. Saltando.", "success")
+                if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
+                    self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ✅", text_color="#10B981"))
+                self._save_account_memory(serial, "Desconocido (Ya estaba logueado)", "A ciegas/Pre-check")
+                if "Ahora no" in pre_check:
+                    match = re.search(r'text="Ahora no".*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', pre_check)
+                    if match:
+                        ax1, ay1, ax2, ay2 = map(int, match.groups())
+                        self.adb.run_command(["shell", "input", "tap", str((ax1 + ax2) // 2), str((ay1 + ay2) // 2)], serial)
+                return
 
             self.acc_log(f"🚀 Iniciando Registro App en {serial} (A Ciegas)", "success")
             self.acc_log(f"Correo Nuevo: {email}")
@@ -4300,6 +4352,8 @@ class ProxyFarmApp(ctk.CTk):
                 pantalla_texto = " ".join([n.get("text", "") for n in root.iter()]).lower()
                 if "como te llamas" in pantalla_texto or "what's your name" in pantalla_texto or "crear cuenta" in pantalla_texto:
                     self.acc_log(" [ERROR] El bot sigue en la pantalla de Nombre. Algo impidio crear la cuenta.", "error")
+                    if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
+                        self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ❌", text_color="#EF4444"))
                     return False
                 elif "captcha" in pantalla_texto or "robot" in pantalla_texto or "proteger tu cuenta" in pantalla_texto:
                     self.acc_log(" Detectado Captcha. Deteniendo proceso para resolucion manual.", "warn")
@@ -4307,16 +4361,24 @@ class ProxyFarmApp(ctk.CTk):
                 else:
                     self.acc_log(" ✅ Formulario completado. Si sale Captcha, por favor resuélvelo manual.", "success")
                     self.acc_log(" 💡 NOTA: Usa el botón '4. Seguir Artistas' cuando la cuenta ya esté limpia.", "warn")
+                    if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
+                        self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ✅", text_color="#10B981"))
+                    self._save_account_memory(serial, email, "Creada a Ciegas")
                     return True
 
             except:
                 self.acc_log("✅ Proceso automático asume éxito (no se pudo verificar). Listo en Captcha.", "success")
+                if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
+                    self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ✅", text_color="#10B981"))
+                self._save_account_memory(serial, email, "Creada a Ciegas (Verificación fallida)")
                 return True
 
             
             
         except Exception as e:
             self.acc_log(f"Falla en el registro App: {str(e)}", "error")
+            if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
+                self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ❌", text_color="#EF4444"))
             return False
 
     def _spotify_login_thread(self, serial):

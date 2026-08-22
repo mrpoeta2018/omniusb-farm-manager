@@ -3718,7 +3718,7 @@ class ProxyFarmApp(ctk.CTk):
         for idx, serial in enumerate(selected):
             self.acc_log(f"--- [Escaner {idx+1}/{len(selected)}] {serial} ---", "info")
             self._force_portrait(serial)
-            self.adb.run_command(["shell", "monkey", "-p", "com.spotify.music", "-c", "android.intent.category.LAUNCHER", "1"], serial)
+            self.adb.run_command(["shell", "am", "start", "-n", "com.spotify.music/com.spotify.music.MainActivity"], serial)
             time.sleep(5)
             self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
             out, _, _ = self.adb.run_command(["shell", "cat", "/sdcard/window_dump.xml"], serial)
@@ -3810,7 +3810,7 @@ class ProxyFarmApp(ctk.CTk):
             # --- SMART PRE-CHECK (PROTECCION DE CUENTA) ---
             self.acc_log(f" [{serial}] Verificando si ya tiene cuenta activa...", "info")
             self._force_portrait(serial)
-            self.adb.run_command(["shell", "monkey", "-p", "com.spotify.music", "-c", "android.intent.category.LAUNCHER", "1"], serial)
+            self.adb.run_command(["shell", "am", "start", "-n", "com.spotify.music/com.spotify.music.MainActivity"], serial)
             s_sleep(4.0)
             self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
             out_check, _, _ = self.adb.run_command(["shell", "cat", "/sdcard/window_dump.xml"], serial)
@@ -3829,7 +3829,7 @@ class ProxyFarmApp(ctk.CTk):
                 s_sleep(1)
                 self.adb.run_command(["shell", "pm", "clear", "com.spotify.music"], serial)
                 s_sleep(1)
-                self.adb.run_command(["shell", "monkey", "-p", "com.spotify.music", "-c", "android.intent.category.LAUNCHER", "1"], serial)
+                self.adb.run_command(["shell", "am", "start", "-n", "com.spotify.music/com.spotify.music.MainActivity"], serial)
                 s_sleep(6)
                 
                 # Clic "Iniciar sesion"

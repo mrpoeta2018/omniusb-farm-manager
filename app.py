@@ -3734,11 +3734,39 @@ class ProxyFarmApp(ctk.CTk):
             return
 
         self.btn_google_login.configure(state="disabled", text="⏳ Iniciando Login Google...")
-        for s in selected:
-            import threading
-            threading.Thread(target=self._spotify_google_login_thread, args=(s,), daemon=True).start()
+        if hasattr(self, 'btn_stop_signup'):
+            self.btn_stop_signup.configure(state="normal")
+        self.stop_signup = False
         
-        self.after(2000, lambda: self.btn_google_login.configure(state="normal", text="🤖 3. Login Automático (Vía Google)"))
+        import threading
+        threading.Thread(target=self._master_google_login_thread, args=(selected,), daemon=True).start()
+        
+    def _master_google_login_thread(self, selected):
+        import time
+        self.acc_log(f"=== INICIANDO LOGIN GOOGLE SECUENCIAL ({len(selected)} Dispositivos) ===")
+        
+        for s in selected:
+            if hasattr(self, 'acc_device_checkboxes') and s in self.acc_device_checkboxes:
+                self.after(0, lambda dev=s: self.acc_device_checkboxes[dev].configure(text_color="white"))
+                
+        for idx, serial in enumerate(selected):
+            if getattr(self, 'stop_signup', False):
+                self.acc_log("⛔ Proceso cancelado por el usuario.", "error")
+                break
+                
+            self.acc_log(f"--- [Dispositivo {idx+1}/{len(selected)}] {serial} ---", "info")
+            # Bloquear giroscopio
+            self.adb.run_command(["shell", "settings", "put", "system", "accelerometer_rotation", "0"], serial)
+            
+            try:
+                self._spotify_google_login_thread(serial)
+            except Exception as e:
+                self.acc_log(f"Error en {serial}: {e}", "error")
+            
+            time.sleep(3)
+            
+        self.after(0, lambda: self.btn_google_login.configure(state="normal", text="🤖 3. Login Automático (Vía Google)"))
+        self.acc_log("=== LOGIN GOOGLE FINALIZADO ===", "success")
 
     def _spotify_google_login_thread(self, serial):
         import time

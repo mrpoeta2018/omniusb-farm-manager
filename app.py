@@ -3583,46 +3583,55 @@ class ProxyFarmApp(ctk.CTk):
         self.acc_log(f"Escribiendo contraseña manual: {pwd} en {serial}...")
         self.adb.run_command(["shell", "input", "text", pwd], serial)
 
-    def find_and_click_by_text(self, serial, target_texts):
-        self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
-        local_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"dump_{serial}.xml")
-        
-        self.adb.run_command(["pull", "/sdcard/window_dump.xml", local_path], serial)
-        if not os.path.exists(local_path):
-            return False
-            
+    def find_and_click_by_text(self, serial, target_texts, do_swipe=False):
         import xml.etree.ElementTree as ET
         import re
-        
-        try:
-            tree = ET.parse(local_path)
-            root = tree.getroot()
-            os.remove(local_path)
+        import os
+        import time
+
+        for attempt in range(2 if do_swipe else 1):
+            self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
+            local_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"dump_{serial}.xml")
             
-            for node in root.iter():
-                text_attr = node.get("text", "")
-                desc_attr = node.get("content-desc", "")
-                
-                match = False
-                for target in target_texts:
-                    if target.lower() in text_attr.lower() or target.lower() in desc_attr.lower():
-                        match = True
-                        break
-                        
-                if match:
-                    bounds = node.get("bounds", "")
-                    m = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", bounds)
-                    if m:
-                        x1, y1, x2, y2 = map(int, m.groups())
-                        cx = int((x1 + x2) / 2)
-                        cy = int((y1 + y2) / 2)
-                        self.acc_log(f"Encontrado botón '{text_attr}' en ({cx}, {cy}). Pulsando...")
-                        self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], serial)
-                        return True
-        except Exception as e:
-            self.acc_log(f"Error al analizar pantalla: {str(e)}", "warn")
-            if os.path.exists(local_path):
+            self.adb.run_command(["pull", "/sdcard/window_dump.xml", local_path], serial)
+            if not os.path.exists(local_path):
+                continue
+            
+            try:
+                tree = ET.parse(local_path)
+                root = tree.getroot()
                 os.remove(local_path)
+                
+                for node in root.iter():
+                    text_attr = node.get("text", "")
+                    desc_attr = node.get("content-desc", "")
+                    
+                    match = False
+                    for target in target_texts:
+                        if target.lower() in text_attr.lower() or target.lower() in desc_attr.lower():
+                            match = True
+                            break
+                            
+                    if match:
+                        bounds = node.get("bounds", "")
+                        m = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", bounds)
+                        if m:
+                            x1, y1, x2, y2 = map(int, m.groups())
+                            cx = int((x1 + x2) / 2)
+                            cy = int((y1 + y2) / 2)
+                            self.acc_log(f"Encontrado botón '{text_attr}' en ({cx}, {cy}). Pulsando...")
+                            self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], serial)
+                            return True
+            except Exception as e:
+                self.acc_log(f"Error al analizar pantalla: {str(e)}", "warn")
+                if os.path.exists(local_path):
+                    os.remove(local_path)
+            
+            if do_swipe and attempt == 0:
+                self.acc_log(f" [{serial}] No se encontró texto. Deslizando hacia abajo...", "info")
+                self.adb.run_command(["shell", "input", "swipe", "500", "1500", "500", "500"], serial)
+                time.sleep(2)
+                
         return False
 
     def start_spotify_account_creation(self):

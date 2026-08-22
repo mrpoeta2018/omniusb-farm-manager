@@ -3485,17 +3485,15 @@ class ProxyFarmApp(ctk.CTk):
         self.chk_slow_mode = ctk.CTkCheckBox(left_frame, text="🐢 Modo Lento (Para celulares lentos)", variable=self.acc_slow_mode_var)
         self.chk_slow_mode.pack(pady=5, padx=30, anchor="w")
         
-        if not hasattr(self, 'google_login_fallback_var'):
-            self.google_login_fallback_var = ctk.BooleanVar(value=True)
-        self.google_login_checkbox = ctk.CTkCheckBox(left_frame, text="🤖 Intentar Login Google Automático", variable=self.google_login_fallback_var, text_color="#10B981")
-        self.google_login_checkbox.pack(pady=5, padx=30, anchor="w")
+        self.btn_google_login = ctk.CTkButton(left_frame, text="🤖 3. Login Automático (Vía Google)", fg_color="#10B981", hover_color="#059669", command=self.start_spotify_google_login, height=35)
+        self.btn_google_login.pack(pady=5, fill="x", padx=30)
         
-        self.btn_signup_acc = ctk.CTkButton(left_frame, text="✨ 3. Crear Cuenta en App / Login", fg_color="#D946EF", hover_color="#C026D3", command=self.start_spotify_app_signup, height=35)
+        self.btn_signup_acc = ctk.CTkButton(left_frame, text="✨ 4. Crear Cuenta en App (A Ciegas)", fg_color="#D946EF", hover_color="#C026D3", command=self.start_spotify_app_signup, height=35)
         self.btn_signup_acc.pack(pady=5, fill="x", padx=30)
-        self.btn_follow_artists = ctk.CTkButton(left_frame, text="🎨 4. Seguir Artistas (Opcional)", fg_color="#EC4899", hover_color="#DB2777", command=self.start_spotify_follow_artists, height=35)
+        self.btn_follow_artists = ctk.CTkButton(left_frame, text="🎨 5. Seguir Artistas (Opcional)", fg_color="#EC4899", hover_color="#DB2777", command=self.start_spotify_follow_artists, height=35)
         self.btn_follow_artists.pack(pady=5, fill="x", padx=30)
         
-        self.btn_logout_acc = ctk.CTkButton(left_frame, text="🚪 5. Cerrar Sesión (A Ciegas)", fg_color="#8B5CF6", hover_color="#7C3AED", command=self.start_spotify_logout, height=35)
+        self.btn_logout_acc = ctk.CTkButton(left_frame, text="🚪 6. Cerrar Sesión (A Ciegas)", fg_color="#8B5CF6", hover_color="#7C3AED", command=self.start_spotify_logout, height=35)
         self.btn_logout_acc.pack(pady=5, fill="x", padx=30)
         
         self.btn_stop_signup = ctk.CTkButton(left_frame, text="🛑 Detener Proceso", fg_color="#EF4444", hover_color="#DC2626", command=self.stop_spotify_signup, height=35, state="disabled")
@@ -3671,6 +3669,99 @@ class ProxyFarmApp(ctk.CTk):
             
         self.after(0, lambda: self.btn_start_acc.configure(state="normal", text="🌐 1. Abrir Registro Chrome (Visible)"))
 
+    def start_spotify_google_login(self):
+        selected = [s for s, v in self.acc_device_vars.items() if v.get()]
+        if not selected:
+            self.acc_log("Selecciona al menos un celular", "warn")
+            return
+
+        self.btn_google_login.configure(state="disabled", text="⏳ Iniciando Login Google...")
+        for s in selected:
+            import threading
+            threading.Thread(target=self._spotify_google_login_thread, args=(s,), daemon=True).start()
+        
+        self.after(2000, lambda: self.btn_google_login.configure(state="normal", text="🤖 3. Login Automático (Vía Google)"))
+
+    def _spotify_google_login_thread(self, serial):
+        import time
+        import re
+        
+        is_slow = getattr(self, "acc_slow_mode_var", type('obj',(object,),{'get':lambda:False})()).get()
+        def s_sleep(base_time):
+            total = base_time * 2.5 if is_slow else base_time
+            slept = 0
+            while slept < total:
+                if getattr(self, 'stop_signup', False):
+                    raise Exception('PROCESO DETENIDO_POR_EL_USUARIO')
+                time.sleep(0.5)
+                slept += 0.5
+
+        try:
+            self.acc_log(f" [{serial}] Iniciando proceso de Login con Google...", "info")
+            
+            # Vamos a iterar hasta 5 veces (por si hay 5 correos)
+            for email_index in range(5):
+                self.adb.run_command(["shell", "am", "force-stop", "com.spotify.music"], serial)
+                s_sleep(1)
+                self.adb.run_command(["shell", "pm", "clear", "com.spotify.music"], serial)
+                s_sleep(1)
+                self.adb.run_command(["shell", "monkey", "-p", "com.spotify.music", "-c", "android.intent.category.LAUNCHER", "1"], serial)
+                s_sleep(6)
+                
+                # Clic "Iniciar sesion"
+                self.adb.run_command(["shell", "input", "tap", "240", "790"], serial)
+                s_sleep(3)
+                
+                # Clic "Google"
+                self.adb.run_command(["shell", "input", "tap", "240", "560"], serial)
+                s_sleep(8) # Dar tiempo a que google cargue
+                
+                # Volcar UI para encontrar los correos y tocar el indice actual
+                self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
+                xml_out, _, _ = self.adb.run_command(["shell", "cat", "/sdcard/window_dump.xml"], serial)
+                
+                # Encontrar todos los resource-id="com.google.android.gms:id/account_name"
+                matches = re.findall(r'text="([^"]+)" resource-id="com\.google\.android\.gms:id/account_name".*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml_out)
+                
+                if not matches:
+                    self.acc_log(f" [{serial}] No se detectaron cuentas de Google en la pantalla. Operación abortada.", "error")
+                    break
+                    
+                if email_index >= len(matches):
+                    self.acc_log(f" [{serial}] Todos los {len(matches)} correos de Google fallaron.", "error")
+                    break
+                    
+                target_email = matches[email_index][0]
+                x1, y1, x2, y2 = map(int, matches[email_index][1:])
+                cx = (x1 + x2) // 2
+                cy = (y1 + y2) // 2
+                
+                self.acc_log(f" [{serial}] Probando correo #{email_index + 1}: {target_email}", "info")
+                self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], serial)
+                
+                # Esperar 12 segundos a ver si entra a Spotify
+                s_sleep(12)
+                
+                self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
+                check_out, _, _ = self.adb.run_command(["shell", "cat", "/sdcard/window_dump.xml"], serial)
+                
+                if "Inicio, Pesta" in check_out or "Buscar, Pesta" in check_out or "Tu biblioteca, Pesta" in check_out:
+                    self.acc_log(f" [{serial}] LOGIN CON GOOGLE EXITOSO! ({target_email})", "success")
+                    # Lanzar cancion para empezar a farmear
+                    if hasattr(self, 'playlist_textbox'):
+                        playlists = [p.strip() for p in self.playlist_textbox.get("1.0", "end").strip().split(chr(10)) if p.strip()]
+                        tracks = [t.strip() for t in getattr(self, 'tracks_textbox', type('obj', (object,), {'get': lambda *a: ''})()).get("1.0", "end").strip().split(chr(10)) if t.strip()]
+                        target = playlists if playlists else tracks
+                        if target:
+                            import random
+                            self._inject_playlist_to_single(serial, random.choice(target))
+                    return
+                else:
+                    self.acc_log(f" [{serial}] El correo {target_email} falló o no está listo. Intentando el siguiente...", "warn")
+                    
+        except Exception as e:
+            self.acc_log(f" [{serial}] Error en Login Google: {str(e)}", "error")
+
     def start_spotify_login(self):
         selected = [s for s, v in self.acc_device_vars.items() if v.get()]
         if not selected:
@@ -3732,7 +3823,7 @@ class ProxyFarmApp(ctk.CTk):
         self.acc_log(f"Procesados: {total_devices}")
         self.acc_log(f"Exitosos: {success_count}", "success")
         
-        self.after(0, lambda: self.btn_logout_acc.configure(state="normal", text=" 🚪 5. Cerrar Sesión (A Ciegas)"))
+        self.after(0, lambda: self.btn_logout_acc.configure(state="normal", text=" 🚪 6. Cerrar Sesión (A Ciegas)"))
         if hasattr(self, 'btn_stop_signup'):
             self.after(0, lambda: self.btn_stop_signup.configure(state="disabled"))
 
@@ -3925,7 +4016,7 @@ class ProxyFarmApp(ctk.CTk):
         self.acc_log(f"Procesados: {total_devices}")
         self.acc_log(f"Exitosos: {success_count}", "success")
         
-        self.after(0, lambda: self.btn_follow_artists.configure(state="normal", text="🎨 4. Seguir Artistas (Opcional)"))
+        self.after(0, lambda: self.btn_follow_artists.configure(state="normal", text="🎨 5. Seguir Artistas (Opcional)"))
         if hasattr(self, 'btn_stop_signup'):
             self.after(0, lambda: self.btn_stop_signup.configure(state="disabled"))
 
@@ -3974,73 +4065,6 @@ class ProxyFarmApp(ctk.CTk):
                 slept += 0.5
             
         try:
-            # === GOOGLE LOGIN FALLBACK ===
-            if getattr(self, 'google_login_fallback_var', type('obj',(object,),{'get':lambda:False})()).get():
-                self.acc_log(f" [{serial}] Intentando Login con Google primero...", "info")
-                import re
-                
-                # Vamos a iterar hasta 5 veces (por si hay 5 correos)
-                for email_index in range(5):
-                    self.adb.run_command(["shell", "am", "force-stop", "com.spotify.music"], serial)
-                    s_sleep(1)
-                    self.adb.run_command(["shell", "pm", "clear", "com.spotify.music"], serial)
-                    s_sleep(1)
-                    self.adb.run_command(["shell", "monkey", "-p", "com.spotify.music", "-c", "android.intent.category.LAUNCHER", "1"], serial)
-                    s_sleep(6)
-                    
-                    # Clic "Iniciar sesion"
-                    self.adb.run_command(["shell", "input", "tap", "240", "790"], serial)
-                    s_sleep(3)
-                    
-                    # Clic "Google"
-                    self.adb.run_command(["shell", "input", "tap", "240", "560"], serial)
-                    s_sleep(8) # Dar tiempo a que google cargue
-                    
-                    # Volcar UI para encontrar los correos y tocar el indice actual
-                    self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
-                    xml_out, _, _ = self.adb.run_command(["shell", "cat", "/sdcard/window_dump.xml"], serial)
-                    
-                    # Encontrar todos los resource-id="com.google.android.gms:id/account_name"
-                    matches = re.findall(r'text="([^"]+)" resource-id="com\.google\.android\.gms:id/account_name".*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml_out)
-                    
-                    if not matches:
-                        self.acc_log(f" [{serial}] No se detectaron cuentas de Google en la pantalla. Creando fake...", "warn")
-                        break # Salir del loop de Google y pasar a crear cuenta
-                        
-                    if email_index >= len(matches):
-                        self.acc_log(f" [{serial}] Todos los {len(matches)} correos de Google fallaron. Creando fake...", "warn")
-                        break # Ya probamos todos los correos en pantalla
-                        
-                    target_email = matches[email_index][0]
-                    x1, y1, x2, y2 = map(int, matches[email_index][1:])
-                    cx = (x1 + x2) // 2
-                    cy = (y1 + y2) // 2
-                    
-                    self.acc_log(f" [{serial}] Probando correo #{email_index + 1}: {target_email}", "info")
-                    self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], serial)
-                    
-                    # Esperar 12 segundos a ver si entra a Spotify
-                    s_sleep(12)
-                    
-                    self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
-                    check_out, _, _ = self.adb.run_command(["shell", "cat", "/sdcard/window_dump.xml"], serial)
-                    
-                    if "Inicio, Pesta" in check_out or "Buscar, Pesta" in check_out or "Tu biblioteca, Pesta" in check_out:
-                        self.acc_log(f" [{serial}] LOGIN CON GOOGLE EXITOSO! ({target_email})", "success")
-                        # Lanzar cancion para empezar a farmear
-                        if hasattr(self, 'playlist_textbox'):
-                            playlists = [p.strip() for p in self.playlist_textbox.get("1.0", "end").strip().split(chr(10)) if p.strip()]
-                            tracks = [t.strip() for t in getattr(self, 'tracks_textbox', type('obj', (object,), {'get': lambda *a: ''})()).get("1.0", "end").strip().split(chr(10)) if t.strip()]
-                            target = playlists if playlists else tracks
-                            if target:
-                                import random
-                                self._inject_playlist_to_single(serial, random.choice(target))
-                        return # Termina exitosamente, NO crear cuenta fake
-                    else:
-                        self.acc_log(f" [{serial}] El correo {target_email} fall. Intentando el siguiente...", "warn")
-            
-            self.acc_log(f" [{serial}] Pasando a Creación de Cuenta con Email Falso...", "warn")
-            # === FIN GOOGLE LOGIN FALLBACK ===
 
             self.acc_log(f"🚀 Iniciando Registro App en {serial} (A Ciegas)", "success")
             self.acc_log(f"Correo Nuevo: {email}")

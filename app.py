@@ -3718,9 +3718,11 @@ class ProxyFarmApp(ctk.CTk):
             
             out = out.lower() if isinstance(out, str) else ""
             if "inicio, pesta" in out or "buscar, pesta" in out or "tu biblioteca" in out or "permitir actividad en segundo plano" in out or "ahora no" in out or "home" in out:
-                self.acc_log(f" [{serial}] ✅ CON SESIÓN ACTIVA.", "success")
+                self.acc_log(f" [{serial}] ✅ CON SESIÓN ACTIVA. (Desmarcando)", "success")
                 if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
                     self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ✅", text_color="#10B981"))
+                if hasattr(self, 'acc_device_vars') and serial in self.acc_device_vars:
+                    self.after(0, lambda s=serial: self.acc_device_vars[s].set(False))
                 
                 # Cerrar popup si existe
                 if "ahora no" in out:
@@ -3729,9 +3731,11 @@ class ProxyFarmApp(ctk.CTk):
                         ax1, ay1, ax2, ay2 = map(int, match.groups())
                         self.adb.run_command(["shell", "input", "tap", str((ax1 + ax2) // 2), str((ay1 + ay2) // 2)], serial)
             else:
-                self.acc_log(f" [{serial}] ❌ SIN SESIÓN.", "warn")
+                self.acc_log(f" [{serial}] ❌ SIN SESIÓN. (Marcando para crear)", "warn")
                 if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
                     self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ❌", text_color="#EF4444"))
+                if hasattr(self, 'acc_device_vars') and serial in self.acc_device_vars:
+                    self.after(0, lambda s=serial: self.acc_device_vars[s].set(True))
                     
         self.after(0, lambda: self.btn_scan_acc.configure(state="normal", text="🔍 0. Escanear Sesiones (Pre-Check)"))
         self.acc_log("=== ESCANEO FINALIZADO ===", "success")
@@ -3740,6 +3744,10 @@ class ProxyFarmApp(ctk.CTk):
         selected = [s for s, v in self.acc_device_vars.items() if v.get()]
         if not selected:
             self.acc_log("Selecciona al menos un celular", "warn")
+            return
+            
+        import tkinter.messagebox as mb
+        if not mb.askyesno("Confirmación", "¿Ya pasaste el 'Escáner de Sesiones'?\n\nEs muy recomendable escanear antes para que se desmarquen automáticamente los que ya tienen cuenta.\n\n¿Deseas continuar con los dispositivos seleccionados?"):
             return
 
         self.btn_google_login.configure(state="disabled", text="⏳ Iniciando Login Google...")

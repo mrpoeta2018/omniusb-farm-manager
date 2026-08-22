@@ -3792,6 +3792,21 @@ class ProxyFarmApp(ctk.CTk):
         try:
             self.acc_log(f" [{serial}] Iniciando proceso de Login con Google...", "info")
             
+            # --- SMART PRE-CHECK (PROTECCION DE CUENTA) ---
+            self.acc_log(f" [{serial}] Verificando si ya tiene cuenta activa...", "info")
+            self.adb.run_command(["shell", "monkey", "-p", "com.spotify.music", "-c", "android.intent.category.LAUNCHER", "1"], serial)
+            s_sleep(4.0)
+            self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
+            out_check, _, _ = self.adb.run_command(["shell", "cat", "/sdcard/window_dump.xml"], serial)
+            out_check = out_check.lower() if isinstance(out_check, str) else ""
+            if "inicio, pesta" in out_check or "buscar, pesta" in out_check or "tu biblioteca" in out_check or "permitir actividad en segundo plano" in out_check or "ahora no" in out_check:
+                self.acc_log(f" [{serial}] 🛡️ ¡LA CUENTA YA ESTÁ LOGUEADA! Saltando para no borrarla.", "success")
+                if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
+                    self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ✅", text_color="#10B981"))
+                return True
+            self.acc_log(f" [{serial}] No hay cuenta activa. Procediendo a limpiar y loguear...", "info")
+            # ----------------------------------------------
+            
             # Vamos a iterar hasta 5 veces (por si hay 5 correos)
             for email_index in range(5):
                 self.adb.run_command(["shell", "am", "force-stop", "com.spotify.music"], serial)

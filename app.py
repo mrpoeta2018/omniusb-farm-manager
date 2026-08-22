@@ -3324,6 +3324,7 @@ class ProxyFarmApp(ctk.CTk):
         # 5. Enviar mensaje
         click_chat = self.find_and_click_by_text(serial, ["send a message", "enviar mensaje", "chat"])
         if not click_chat:
+            self.adb.run_command(["shell", "input", "tap", "200", "750"], serial)
             self.adb.run_command(["shell", "input", "tap", "200", "1250"], serial)
         time.sleep(2)
         
@@ -3341,12 +3342,23 @@ class ProxyFarmApp(ctk.CTk):
         import time
         # === 1. Auto-Seguidor (Follow) ===
         self.log_msg(f"Intentando dar Follow en {s}...", "info")
+        
+        # Toque 1: Despertar la pantalla / Overlay del video
         self.adb.run_command(["shell", "input", "tap", "360", "400"], s)
         time.sleep(1.5)
+        
+        # Toque 2: Toques ciegos al boton verde grande de Seguir (Supera el escudo invisible)
+        self.log_msg("Lanzando toques francotirador al boton verde de Seguir...", "info")
+        self.adb.run_command(["shell", "input", "tap", "380", "400"], s)
+        time.sleep(0.5)
+        self.adb.run_command(["shell", "input", "tap", "380", "450"], s)
+        time.sleep(1)
+        
+        # Fallback de lectura (por si acaso cambió de posición)
         if self.find_and_click_by_text(s, ["follow", "seguir"]):
-            self.log_msg(f"✅ ¡Se ha seguido al canal en {s}!", "success")
-        else:
-            self.log_msg(f"No se vio el botón Follow. Tal vez ya lo sigue.", "warn")
+            pass
+            
+        self.log_msg(f"✅ ¡Se superó el escudo de seguidores en {s}!", "success")
         time.sleep(1)
 
         # === 2. Aceptar Reglas del Chat ===

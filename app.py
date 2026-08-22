@@ -3485,7 +3485,12 @@ class ProxyFarmApp(ctk.CTk):
         self.chk_slow_mode = ctk.CTkCheckBox(left_frame, text="🐢 Modo Lento (Para celulares lentos)", variable=self.acc_slow_mode_var)
         self.chk_slow_mode.pack(pady=5, padx=30, anchor="w")
         
-        self.btn_signup_acc = ctk.CTkButton(left_frame, text="✨ 3. Crear Cuenta en App (A Ciegas)", fg_color="#D946EF", hover_color="#C026D3", command=self.start_spotify_app_signup, height=35)
+        if not hasattr(self, 'google_login_fallback_var'):
+            self.google_login_fallback_var = ctk.BooleanVar(value=True)
+        self.google_login_checkbox = ctk.CTkCheckBox(left_frame, text="🤖 Intentar Login Google Automático", variable=self.google_login_fallback_var, text_color="#10B981")
+        self.google_login_checkbox.pack(pady=5, padx=30, anchor="w")
+        
+        self.btn_signup_acc = ctk.CTkButton(left_frame, text="✨ 3. Crear Cuenta en App / Login", fg_color="#D946EF", hover_color="#C026D3", command=self.start_spotify_app_signup, height=35)
         self.btn_signup_acc.pack(pady=5, fill="x", padx=30)
         self.btn_follow_artists = ctk.CTkButton(left_frame, text="🎨 4. Seguir Artistas (Opcional)", fg_color="#EC4899", hover_color="#DB2777", command=self.start_spotify_follow_artists, height=35)
         self.btn_follow_artists.pack(pady=5, fill="x", padx=30)
@@ -3673,7 +3678,8 @@ class ProxyFarmApp(ctk.CTk):
             return
             
         self.btn_login_acc.configure(state="disabled", text="⏳ Iniciando sesión...")
-        threading.Thread(target=self._spotify_login_thread, args=(serial,), daemon=True).start()
+        for s in selected:
+            threading.Thread(target=self._spotify_login_thread, args=(s,), daemon=True).start()
 
 
     def start_spotify_logout(self):

@@ -1862,9 +1862,13 @@ class ProxyFarmApp(ctk.CTk):
         spot_frame.pack(side="left", fill="both", expand=True, padx=(0, 2))
         self.use_spotify = ctk.BooleanVar(value=True)
         self.spotify_explore_var = ctk.BooleanVar(value=False)
-        ctk.CTkCheckBox(spot_frame, text="🟢 Spotify (Listas):", font=("Arial", 11, "bold"), text_color="white", variable=self.use_spotify).pack(anchor="w", padx=10, pady=(5, 0))
-        self.playlist_textbox = ctk.CTkTextbox(spot_frame, height=160)
-        self.playlist_textbox.pack(padx=5, pady=2, fill="x")
+        ctk.CTkCheckBox(spot_frame, text="🟢 Spotify (Listas):", font=("Arial", 11, "bold"), text_color="white", variable=self.use_spotify).pack(anchor="w", padx=10, pady=(2, 0))
+        self.playlist_textbox = ctk.CTkTextbox(spot_frame, height=65)
+        self.playlist_textbox.pack(padx=5, pady=0, fill="x")
+        
+        ctk.CTkLabel(spot_frame, text="🎸 Canciones Sueltas:", font=("Arial", 11, "bold"), text_color="white").pack(anchor="w", padx=10, pady=(2, 0))
+        self.tracks_textbox = ctk.CTkTextbox(spot_frame, height=65)
+        self.tracks_textbox.pack(padx=5, pady=0, fill="x")
         
         spot_btn_frame = ctk.CTkFrame(spot_frame, fg_color="transparent")
         spot_btn_frame.pack(fill="x", padx=5, pady=(0, 5))
@@ -2118,6 +2122,9 @@ class ProxyFarmApp(ctk.CTk):
                     self.spotify_normal_urls = data["playlists"].strip()
                     self.playlist_textbox.delete("1.0", "end")
                     self.playlist_textbox.insert("1.0", self.spotify_normal_urls + "\n")
+                if "tracks" in data and hasattr(self, 'tracks_textbox'):
+                    self.tracks_textbox.delete("1.0", "end")
+                    self.tracks_textbox.insert("1.0", data["tracks"].strip() + "\n")
                 if "spotify_clone_url" in data:
                     self.spotify_clone_url = data["spotify_clone_url"].strip()
                 if "master_mode" in data:
@@ -2211,6 +2218,7 @@ class ProxyFarmApp(ctk.CTk):
                 "bot_only": getattr(self, 'bot_only_var', ctk.BooleanVar(value=False)).get(),
                 "proxies": self.proxy_textbox.get("1.0", "end").strip(),
                 "playlists": self.spotify_normal_urls if getattr(self, '_last_spotify_mode', 'Normal') == 'Clonar Copia' else self.playlist_textbox.get("1.0", "end").strip(),
+                "tracks": self.tracks_textbox.get("1.0", "end").strip() if hasattr(self, 'tracks_textbox') else "",
                 "spotify_clone_url": self.playlist_textbox.get("1.0", "end").strip() if getattr(self, '_last_spotify_mode', 'Normal') == 'Clonar Copia' else getattr(self, 'spotify_clone_url', ''),
                 "master_mode": self.master_mode.get(),
                 "playlist_interval": self.playlist_interval.get(),

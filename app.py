@@ -3652,11 +3652,6 @@ class ProxyFarmApp(ctk.CTk):
             self.acc_log(f"Correo: {email}")
             self.acc_log(f"Clave: {pwd}")
             
-            # Bloquear la pantalla en vertical (Portrait) para que no gire de lado
-            self.acc_log("Forzando orientación vertical (Portrait)...")
-            self.adb.run_command(["shell", "settings", "put", "system", "accelerometer_rotation", "0"], serial)
-            self.adb.run_command(["shell", "settings", "put", "system", "user_rotation", "0"], serial)
-            s_sleep(1.0)
             
             # Abrir registro de Spotify en Chrome
             signup_url = "https://www.spotify.com/signup"
@@ -4155,10 +4150,6 @@ class ProxyFarmApp(ctk.CTk):
             self.acc_log(f"Correo Nuevo: {email}")
             self.acc_log(f"Clave: {pwd}")
             
-            self.acc_log("Forzando orientación vertical...")
-            self.adb.run_command(["shell", "settings", "put", "system", "accelerometer_rotation", "0"], serial)
-            self.adb.run_command(["shell", "settings", "put", "system", "user_rotation", "0"], serial)
-            s_sleep(1.0)
             
             self.acc_log("Abriendo app de Spotify...")
             self.adb.run_command(["shell", "am", "start", "-n", "com.spotify.music/com.spotify.music.MainActivity"], serial)
@@ -4435,10 +4426,6 @@ class ProxyFarmApp(ctk.CTk):
             self.acc_log(f"Clave: {pwd}")
             
             # Bloquear orientación vertical
-            self.acc_log("Forzando orientación vertical...")
-            self.adb.run_command(["shell", "settings", "put", "system", "accelerometer_rotation", "0"], serial)
-            self.adb.run_command(["shell", "settings", "put", "system", "user_rotation", "0"], serial)
-            s_sleep(1.0)
             
             # 1. Abrir Spotify
             self.acc_log("Abriendo app de Spotify...")

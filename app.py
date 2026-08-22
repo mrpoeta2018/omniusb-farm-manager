@@ -3841,6 +3841,9 @@ class ProxyFarmApp(ctk.CTk):
                 
                 if "Inicio, Pesta" in check_out or "Buscar, Pesta" in check_out or "Tu biblioteca, Pesta" in check_out or "Permitir actividad en segundo plano" in check_out or "Ahora no" in check_out:
                     self.acc_log(f" [{serial}] LOGIN CON GOOGLE EXITOSO! ({target_email})", "success")
+                    # Quitar el giro y forzar vertical al final
+                    self.adb.run_command(["shell", "settings", "put", "system", "accelerometer_rotation", "0"], serial)
+                    self.adb.run_command(["shell", "settings", "put", "system", "user_rotation", "0"], serial)
                     if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
                         self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ✅", text_color="#10B981"))
                     self._save_account_memory(serial, target_email, "Google Auto")
@@ -4409,6 +4412,9 @@ class ProxyFarmApp(ctk.CTk):
                 else:
                     self.acc_log(" ✅ Formulario completado. Si sale Captcha, por favor resuélvelo manual.", "success")
                     self.acc_log(" 💡 NOTA: Usa el botón '4. Seguir Artistas' cuando la cuenta ya esté limpia.", "warn")
+                    # Quitar el giro y forzar vertical al final
+                    self.adb.run_command(["shell", "settings", "put", "system", "accelerometer_rotation", "0"], serial)
+                    self.adb.run_command(["shell", "settings", "put", "system", "user_rotation", "0"], serial)
                     if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
                         self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ✅", text_color="#10B981"))
                     self._save_account_memory(serial, email, "Creada a Ciegas")
@@ -4416,6 +4422,9 @@ class ProxyFarmApp(ctk.CTk):
 
             except:
                 self.acc_log("✅ Proceso automático asume éxito (no se pudo verificar). Listo en Captcha.", "success")
+                # Quitar el giro y forzar vertical al final
+                self.adb.run_command(["shell", "settings", "put", "system", "accelerometer_rotation", "0"], serial)
+                self.adb.run_command(["shell", "settings", "put", "system", "user_rotation", "0"], serial)
                 if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
                     self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ✅", text_color="#10B981"))
                 self._save_account_memory(serial, email, "Creada a Ciegas (Verificación fallida)")

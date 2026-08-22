@@ -3960,7 +3960,74 @@ class ProxyFarmApp(ctk.CTk):
                 slept += 0.5
             
         try:
+            # === GOOGLE LOGIN FALLBACK ===
+            if getattr(self, 'google_login_fallback_var', type('obj',(object,),{'get':lambda:False})()).get():
+                self.acc_log(f" [{serial}] Intentando Login con Google primero...", "info")
+                import re
+                
+                # Vamos a iterar hasta 5 veces (por si hay 5 correos)
+                for email_index in range(5):
+                    self.adb.run_command(["shell", "am", "force-stop", "com.spotify.music"], serial)
+                    s_sleep(1)
+                    self.adb.run_command(["shell", "pm", "clear", "com.spotify.music"], serial)
+                    s_sleep(1)
+                    self.adb.run_command(["shell", "monkey", "-p", "com.spotify.music", "-c", "android.intent.category.LAUNCHER", "1"], serial)
+                    s_sleep(6)
+                    
+                    # Clic "Iniciar sesion"
+                    self.adb.run_command(["shell", "input", "tap", "240", "790"], serial)
+                    s_sleep(3)
+                    
+                    # Clic "Google"
+                    self.adb.run_command(["shell", "input", "tap", "240", "560"], serial)
+                    s_sleep(8) # Dar tiempo a que google cargue
+                    
+                    # Volcar UI para encontrar los correos y tocar el indice actual
+                    self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
+                    xml_out, _, _ = self.adb.run_command(["shell", "cat", "/sdcard/window_dump.xml"], serial)
+                    
+                    # Encontrar todos los resource-id="com.google.android.gms:id/account_name"
+                    matches = re.findall(r'text="([^"]+)" resource-id="com\.google\.android\.gms:id/account_name".*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml_out)
+                    
+                    if not matches:
+                        self.acc_log(f" [{serial}] No se detectaron cuentas de Google en la pantalla. Creando fake...", "warn")
+                        break # Salir del loop de Google y pasar a crear cuenta
+                        
+                    if email_index >= len(matches):
+                        self.acc_log(f" [{serial}] Todos los {len(matches)} correos de Google fallaron. Creando fake...", "warn")
+                        break # Ya probamos todos los correos en pantalla
+                        
+                    target_email = matches[email_index][0]
+                    x1, y1, x2, y2 = map(int, matches[email_index][1:])
+                    cx = (x1 + x2) // 2
+                    cy = (y1 + y2) // 2
+                    
+                    self.acc_log(f" [{serial}] Probando correo #{email_index + 1}: {target_email}", "info")
+                    self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], serial)
+                    
+                    # Esperar 12 segundos a ver si entra a Spotify
+                    s_sleep(12)
+                    
+                    self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
+                    check_out, _, _ = self.adb.run_command(["shell", "cat", "/sdcard/window_dump.xml"], serial)
+                    
+                    if "Inicio, Pesta" in check_out or "Buscar, Pesta" in check_out or "Tu biblioteca, Pesta" in check_out:
+                        self.acc_log(f" [{serial}] LOGIN CON GOOGLE EXITOSO! ({target_email})", "success")
+                        # Lanzar cancion para empezar a farmear
+                        if hasattr(self, 'playlist_textbox'):
+                            playlists = [p.strip() for p in self.playlist_textbox.get("1.0", "end").strip().split(chr(10)) if p.strip()]
+                            tracks = [t.strip() for t in getattr(self, 'tracks_textbox', type('obj', (object,), {'get': lambda *a: ''})()).get("1.0", "end").strip().split(chr(10)) if t.strip()]
+                            target = playlists if playlists else tracks
+                            if target:
+                                import random
+                                self._inject_playlist_to_single(serial, random.choice(target))
+                        return # Termina exitosamente, NO crear cuenta fake
+                    else:
+                        self.acc_log(f" [{serial}] El correo {target_email} fall. Intentando el siguiente...", "warn")
             
+            self.acc_log(f" [{serial}] Pasando a Creación de Cuenta con Email Falso...", "warn")
+            # === FIN GOOGLE LOGIN FALLBACK ===
+
             self.acc_log(f"🚀 Iniciando Registro App en {serial} (A Ciegas)", "success")
             self.acc_log(f"Correo Nuevo: {email}")
             self.acc_log(f"Clave: {pwd}")

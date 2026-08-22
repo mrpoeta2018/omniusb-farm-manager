@@ -3475,6 +3475,9 @@ class ProxyFarmApp(ctk.CTk):
         # Botones de Acción
         ctk.CTkLabel(left_frame, text="⚡ Controles de Automatización", font=("Arial", 12, "bold")).pack(pady=(15, 5))
         
+        self.btn_scan_acc = ctk.CTkButton(left_frame, text="🔍 0. Escanear Sesiones (Pre-Check)", fg_color="#3B82F6", hover_color="#2563EB", command=self.start_spotify_scan_sessions, height=35)
+        self.btn_scan_acc.pack(pady=5, fill="x", padx=30)
+        
         self.btn_start_acc = ctk.CTkButton(left_frame, text="🌐 1. Abrir Registro Chrome (Visible)", fg_color="#10B981", hover_color="#059669", command=self.start_spotify_account_creation, height=35)
         self.btn_start_acc.pack(pady=5, fill="x", padx=30)
         
@@ -3680,6 +3683,54 @@ class ProxyFarmApp(ctk.CTk):
                 file.write(f"[{now}] Dispositivo: {serial} | Correo: {email} | Tipo: {source}\n")
         except Exception as e:
             self.log_msg(f"Error guardando memoria: {e}", "error")
+
+
+    def start_spotify_scan_sessions(self):
+        selected = [s for s, v in self.acc_device_vars.items() if v.get()]
+        if not selected:
+            self.acc_log("Selecciona al menos un celular", "warn")
+            return
+            
+        self.btn_scan_acc.configure(state="disabled", text="⏳ Escaneando...")
+        import threading
+        threading.Thread(target=self._master_scan_sessions_thread, args=(selected,), daemon=True).start()
+
+    def _master_scan_sessions_thread(self, selected):
+        import time
+        import re
+        self.acc_log(f"=== INICIANDO ESCANEO DE SESIONES ({len(selected)} Dispositivos) ===")
+        
+        # Blanquear
+        for s in selected:
+            if hasattr(self, 'acc_device_checkboxes') and s in self.acc_device_checkboxes:
+                self.after(0, lambda dev=s: self.acc_device_checkboxes[dev].configure(text_color="white"))
+                
+        for idx, serial in enumerate(selected):
+            self.acc_log(f"--- [Escaner {idx+1}/{len(selected)}] {serial} ---", "info")
+            self.adb.run_command(["shell", "monkey", "-p", "com.spotify.music", "-c", "android.intent.category.LAUNCHER", "1"], serial)
+            time.sleep(5)
+            self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/window_dump.xml"], serial)
+            out, _, _ = self.adb.run_command(["shell", "cat", "/sdcard/window_dump.xml"], serial)
+            
+            out = out.lower() if isinstance(out, str) else ""
+            if "inicio, pesta" in out or "buscar, pesta" in out or "tu biblioteca" in out or "permitir actividad en segundo plano" in out or "ahora no" in out or "home" in out:
+                self.acc_log(f" [{serial}] ✅ CON SESIÓN ACTIVA.", "success")
+                if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
+                    self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ✅", text_color="#10B981"))
+                
+                # Cerrar popup si existe
+                if "ahora no" in out:
+                    match = re.search(r'text="ahora no".*?bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', out)
+                    if match:
+                        ax1, ay1, ax2, ay2 = map(int, match.groups())
+                        self.adb.run_command(["shell", "input", "tap", str((ax1 + ax2) // 2), str((ay1 + ay2) // 2)], serial)
+            else:
+                self.acc_log(f" [{serial}] ❌ SIN SESIÓN.", "warn")
+                if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
+                    self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ❌", text_color="#EF4444"))
+                    
+        self.after(0, lambda: self.btn_scan_acc.configure(state="normal", text="🔍 0. Escanear Sesiones (Pre-Check)"))
+        self.acc_log("=== ESCANEO FINALIZADO ===", "success")
 
     def start_spotify_google_login(self):
         selected = [s for s, v in self.acc_device_vars.items() if v.get()]

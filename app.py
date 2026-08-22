@@ -3755,9 +3755,6 @@ class ProxyFarmApp(ctk.CTk):
                 break
                 
             self.acc_log(f"--- [Dispositivo {idx+1}/{len(selected)}] {serial} ---", "info")
-            # Bloquear giroscopio
-            self.adb.run_command(["shell", "settings", "put", "system", "accelerometer_rotation", "0"], serial)
-            self.adb.run_command(["shell", "settings", "put", "system", "user_rotation", "0"], serial)
             
             try:
                 self._spotify_google_login_thread(serial)
@@ -3796,7 +3793,7 @@ class ProxyFarmApp(ctk.CTk):
                 s_sleep(6)
                 
                 # Clic "Iniciar sesion"
-                click_login = self.find_and_click_by_text(serial, ["Iniciar sesión", "Log in", "Iniciar sesi"])
+                click_login = self.find_and_click_by_text(serial, ["Iniciar sesión", "Log in", "Iniciar sesi"], do_swipe=True)
                 if not click_login:
                     self.acc_log(f" [{serial}] No se vio 'Iniciar sesión', toque de respaldo...", "warn")
                     # Toque en la zona baja inferior (donde suele estar en pantallas grandes)
@@ -3804,7 +3801,7 @@ class ProxyFarmApp(ctk.CTk):
                 s_sleep(3)
                 
                 # Clic "Google"
-                click_google = self.find_and_click_by_text(serial, ["Google", "Continuar con Google"])
+                click_google = self.find_and_click_by_text(serial, ["Google", "Continuar con Google"], do_swipe=True)
                 if not click_google:
                     self.acc_log(f" [{serial}] No se vio 'Google', toque de respaldo...", "warn")
                     self.adb.run_command(["shell", "input", "tap", "540", "1200"], serial)

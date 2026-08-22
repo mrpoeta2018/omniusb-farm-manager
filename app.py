@@ -3702,6 +3702,8 @@ class ProxyFarmApp(ctk.CTk):
     def _force_portrait(self, serial):
         self.adb.run_command(["shell", "settings", "put", "system", "accelerometer_rotation", "0"], serial)
         self.adb.run_command(["shell", "settings", "put", "system", "user_rotation", "0"], serial)
+        # TRUCO SECRETO ANDROID: Forzar refresco de configuración para que gire al instante
+        self.adb.run_command(["shell", "am", "broadcast", "-a", "android.intent.action.CONFIGURATION_CHANGED"], serial)
 
     def _master_scan_sessions_thread(self, selected):
         import time

@@ -85,7 +85,7 @@ class GnirehtetRunner:
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
         try:
-            subprocess.run([self.executable_path, "stop", serial], startupinfo=startupinfo, timeout=5, env=self.env)
+            subprocess.run([self.executable_path, "stop", serial], startupinfo=startupinfo, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5, env=self.env)
         except:
             pass
 

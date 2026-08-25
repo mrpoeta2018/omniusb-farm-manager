@@ -146,7 +146,15 @@ def verify_system_integrity():
         try:
             subprocess.run([adb_exe, "start-server"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5)
         except subprocess.TimeoutExpired:
-            print("[!] Aviso: ADB tardó mucho en responder. Continuando de todos modos...")
+            print("[!] Error crítico: ADB está congelado (Timeout). ¡Iniciando Auto-Sanación de ADB!")
+            try:
+                subprocess.run(["taskkill", "/F", "/IM", "adb.exe"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                import time
+                time.sleep(2)
+                subprocess.run([adb_exe, "start-server"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
+                print("[+] ADB reiniciado y desbugeado con éxito.")
+            except Exception as e:
+                print(f"[X] Falló la auto-sanación de ADB: {e}")
     
     print("=== SISTEMA 100% LISTO Y OPERATIVO ===")
 

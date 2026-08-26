@@ -1,5 +1,5 @@
 {
-    "version": "4.6.75",
+    "version": "4.6.76",
     "release_date": "2026-08-20",
     "check_url": "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/main/version.json",
     "notes": "Kick Integration (Personalities, Auto-Follow, Rescue Protocol), Spotify Captcha Bypass, Smart Ghost Touch.",

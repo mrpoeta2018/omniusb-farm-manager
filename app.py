@@ -3043,10 +3043,16 @@ class ProxyFarmApp(ctk.CTk):
         ctk.CTkCheckBox(kick_frame, text="🟩 Kick (Live Streams) | Auto-KeepAlive:", font=("Arial", 12, "bold"), text_color="white", variable=self.kick_auto).pack(anchor="w", padx=10, pady=5)
         self.kick_interact = ctk.BooleanVar(value=False)
         ctk.CTkCheckBox(kick_frame, text="🗣️ Interacción Avanzada (Aceptar reglas y Chatear)", font=("Arial", 11), text_color="white", variable=self.kick_interact).pack(anchor="w", padx=10, pady=(0,5))
-        self.kick_textbox = ctk.CTkTextbox(kick_frame, height=80)
+        self.kick_textbox = ctk.CTkTextbox(kick_frame, height= 30 )
         self.kick_textbox.pack(padx=10, pady=(0,5), fill="x")
+        ctk.CTkLabel(kick_frame, text="  Tus Comentarios (Uno por rengln):", font=("Arial", 11), text_color="#A7F3D0").pack(anchor="w", padx=10)
+        self.kick_chat_textbox = ctk.CTkTextbox(kick_frame, height=60)
+        self.kick_chat_textbox.insert("1.0", "Holaaa\nLlegandooo\nSaludos a todos\nQue buen stream!")
+        self.kick_chat_textbox.pack(padx=10, pady=(0,5), fill="x")
         btn_kick = ctk.CTkButton(kick_frame, text="▶ Inyectar Kick", fg_color="#16A34A", command=self.inject_kick)
         btn_kick.pack(side="right", padx=10, pady=10)
+        btn_kick_chat = ctk.CTkButton(kick_frame, text="💬 Forzar Comentario Ahora", fg_color="#9333EA", hover_color="#7E22CE", command=self.force_kick_chat)
+        btn_kick_chat.pack(side="right", padx=10, pady=10)
         btn_kick_login = ctk.CTkButton(kick_frame, text="🔑 Pre-Check (Login Kick)", fg_color="#2563EB", hover_color="#1D4ED8", command=self.start_kick_google_login)
         btn_kick_login.pack(side="left", padx=10, pady=10)
         
@@ -3488,7 +3494,7 @@ class ProxyFarmApp(ctk.CTk):
 
     def get_random_kick_message(self):
         import random
-        txt = self.kick_textbox.get("1.0", "end-1c").strip()
+        txt = self.kick_chat_textbox.get("1.0", "end-1c").strip()
         if not txt:
             messages = ["Holaaa", "Llegandooo", "Dejando mi apoyo!", "Buenaaas", "Saludos!!", "Epico!!"]
         else:

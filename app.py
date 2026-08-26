@@ -2900,6 +2900,7 @@ class ProxyFarmApp(ctk.CTk):
         threading.Thread(target=_inject, daemon=True).start()
     def watchdog_ghost_loop(self):
         import random
+        import time
         while True:
             time.sleep(5) # Ciclo principal rápido
             try:

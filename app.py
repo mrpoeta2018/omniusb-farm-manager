@@ -3047,6 +3047,8 @@ class ProxyFarmApp(ctk.CTk):
         self.kick_textbox.pack(padx=10, pady=(0,5), fill="x")
         btn_kick = ctk.CTkButton(kick_frame, text="▶ Inyectar Kick", fg_color="#16A34A", command=self.inject_kick)
         btn_kick.pack(side="right", padx=10, pady=10)
+        btn_kick_login = ctk.CTkButton(kick_frame, text="🔑 Pre-Check (Login Kick)", fg_color="#2563EB", hover_color="#1D4ED8", command=self.start_kick_google_login)
+        btn_kick_login.pack(side="left", padx=10, pady=10)
         
         bottom_frame = ctk.CTkFrame(self.tab_social, fg_color="transparent")
         bottom_frame.pack(fill="x", pady=10)

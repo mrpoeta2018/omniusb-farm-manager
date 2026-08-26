@@ -3921,6 +3921,83 @@ class ProxyFarmApp(ctk.CTk):
         self.after(0, lambda: self.btn_google_login.configure(state="normal", text="🤖 3. Login Automático (Vía Google)"))
         self.acc_log("=== LOGIN GOOGLE FINALIZADO ===", "success")
 
+    def _kick_google_login_thread(self, serial):
+        import time
+        
+        is_slow = getattr(self, "acc_slow_mode_var", type('obj',(object,),{'get':lambda:False})()).get()
+        def s_sleep(base_time):
+            total = base_time * 2.5 if is_slow else base_time
+            time.sleep(total)
+
+        try:
+            self.acc_log(f" [{serial[-4:]}] Iniciando Login con Google en KICK...", "info")
+            
+            # --- SMART PRE-CHECK ---
+            self._force_portrait(serial)
+            self.adb.run_command(["shell", "am", "start", "-n", "com.kick.mobile/com.kick.mobile.MainActivity"], serial)
+            s_sleep(4.0)
+            
+            root = getattr(self, 'pull_and_parse', lambda x: None)(serial)
+            if root is not None:
+                texts = [n.get("text", "").lower() for n in root.iter("node")]
+                if not any("log in" in t or "iniciar" in t or "sign up" in t for t in texts):
+                    self.acc_log(f" [{serial[-4:]}] ✅ KICK YA TIENE SESIÓN ACTIVA. Saltando.", "success")
+                    if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
+                        self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ✅", text_color="#10B981"))
+                    return True
+                    
+            self.acc_log(f" [{serial[-4:]}] Sin sesión. Limpiando y logueando...", "warn")
+            # -----------------------
+            
+            for email_index in range(5):
+                if getattr(self, 'stop_signup', False): break
+                
+                self.adb.run_command(["shell", "am", "force-stop", "com.kick.mobile"], serial)
+                self.adb.run_command(["shell", "pm", "clear", "com.kick.mobile"], serial)
+                s_sleep(1)
+                self.adb.run_command(["shell", "am", "start", "-n", "com.kick.mobile/com.kick.mobile.MainActivity"], serial)
+                s_sleep(5)
+                
+                # Iniciar Sesion (Barra superior)
+                click_login = self.find_and_click_by_text(serial, ["iniciar sesi", "log in"], do_swipe=False)
+                if not click_login:
+                    self.acc_log(f" [{serial[-4:]}] Respaldo: Toque 'Iniciar sesión'...", "warn")
+                    self.adb.run_command(["shell", "input", "tap", "240", "50"], serial)
+                s_sleep(4)
+                
+                # Continuar con Google
+                click_google = self.find_and_click_by_text(serial, ["continuar con google", "continue with google", "google"], do_swipe=False)
+                if not click_google:
+                    self.acc_log(f" [{serial[-4:]}] Respaldo: Toque 'Google'...", "warn")
+                    self.adb.run_command(["shell", "input", "tap", "240", "850"], serial)
+                s_sleep(8)
+                
+                # Seleccionar cuenta Gmail
+                click_email = self.find_and_click_by_text(serial, ["@gmail.com"], do_swipe=True)
+                if not click_email:
+                    self.acc_log(f" [{serial[-4:]}] No se vio el correo, asumiendo indice {email_index}...", "warn")
+                    y_offset = 300 + (email_index * 100)
+                    self.adb.run_command(["shell", "input", "tap", "240", str(y_offset)], serial)
+                
+                s_sleep(10)
+                
+                # Verificar exito
+                root2 = getattr(self, 'pull_and_parse', lambda x: None)(serial)
+                if root2 is not None:
+                    texts2 = [n.get("text", "").lower() for n in root2.iter("node")]
+                    if any("creadores destacados" in t or "tu cuenta" in t for t in texts2):
+                        self.acc_log(f" [{serial[-4:]}] ✅ KICK LOGUEADO CON EXITO.", "success")
+                        if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
+                            self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ✅", text_color="#10B981"))
+                        return True
+                        
+            self.acc_log(f" [{serial[-4:]}] ❌ Fallo Login en Kick tras 5 intentos.", "error")
+            return False
+            
+        except Exception as e:
+            self.acc_log(f" [{serial[-4:]}] Error en Kick Login: {e}", "error")
+            return False
+
     def _spotify_google_login_thread(self, serial):
         import time
         import re

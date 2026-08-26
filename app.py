@@ -3957,6 +3957,13 @@ class ProxyFarmApp(ctk.CTk):
             time.sleep(1)
             self.adb.run_command(["shell", "am", "start", "-n", "com.kick.mobile/com.kick.mobile.MainActivity"], s)
             time.sleep(8)
+            
+            # Forzar salir de cualquier stream que Kick haya reanudado automaticamente al abrir
+            self.adb.run_command(["shell", "input", "keyevent", "4"], s)
+            time.sleep(1)
+            self.adb.run_command(["shell", "input", "keyevent", "4"], s)
+            time.sleep(2)
+            
             root = getattr(self, 'pull_and_parse', lambda x: None)(s)
             
             needs_login = False

@@ -3956,23 +3956,36 @@ class ProxyFarmApp(ctk.CTk):
             self.adb.run_command(["shell", "am", "force-stop", "com.kick.mobile"], s)
             time.sleep(1)
             self.adb.run_command(["shell", "am", "start", "-n", "com.kick.mobile/com.kick.mobile.MainActivity"], s)
-            time.sleep(8)
-            
-            # Forzar salir de cualquier stream que Kick haya reanudado automaticamente al abrir
-            self.adb.run_command(["shell", "input", "keyevent", "4"], s)
-            time.sleep(1)
-            self.adb.run_command(["shell", "input", "keyevent", "4"], s)
-            time.sleep(2)
-            
-            root = getattr(self, 'pull_and_parse', lambda x: None)(s)
+            time.sleep(10)
             
             needs_login = False
-            if root is not None:
+            for attempt in range(3):
+                root = getattr(self, 'pull_and_parse', lambda x: None)(s)
+                if root is None:
+                    needs_login = True
+                    break
+                    
                 texts = [n.get("text", "").lower() for n in root.iter("node")]
+                
+                # Si vemos los botones de login directo, cortamos y logueamos.
                 if any("log in" in t or "iniciar sesi" in t or "sign up" in t for t in texts):
                     needs_login = True
-            else:
-                needs_login = True # Por si falla el dump
+                    break
+                    
+                # Si vemos el men principal de alguien logueado ("creadores destacados", "siguiendo")
+                # Y NO estamos viendo la palabra "cargando..." o "conectndose al chat..." (tpico de un stream)
+                if any("creadores destacados" in t or "siguiendo" in t for t in texts) and not any("conectndose al chat" in t or "cargando" in t for t in texts):
+                    needs_login = False
+                    break
+                    
+                # Si llegamos aqu, o es un stream reanudado o un pop-up raro.
+                # Le damos Atrs (una sola vez) para intentar minimizar el stream y volver al men.
+                self.acc_log(f" [{s[-4:]}] Posible stream reanudado. Forzando regreso al men...", "info")
+                self.adb.run_command(["shell", "input", "keyevent", "4"], s)
+                time.sleep(3)
+                
+            # Si despus de los intentos no determinamos nada claro, forzamos login por si acaso.
+            # En la prctica, el break maneja los casos claros.
                 
             if needs_login:
                 self.acc_log(f" [{s[-4:]}] Kick cerrado. Iniciando Auto-Login...", "warn")

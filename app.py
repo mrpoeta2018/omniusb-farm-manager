@@ -3472,14 +3472,15 @@ class ProxyFarmApp(ctk.CTk):
             
         threading.Thread(target=_rescue_process, daemon=True).start()
 
-    def _type_text_human(self, serial, text):
+    def _type_text_fast(self, serial, text):
         import time
-        for char in text:
-            if char == " ":
-                self.adb.run_command(["shell", "input", "text", "%s"], serial)
-            else:
-                self.adb.run_command(["shell", "input", "text", char], serial)
-            time.sleep(0.1)
+        # Enviar el texto completo al instante reemplazando espacios por %s
+        # Esto emula "pegar" el texto y evita que el teclado se cierre por inactividad.
+        safe_text = text.replace(" ", "%s")
+        # Escapar caracteres especiales que bash podra interpretar
+        safe_text = safe_text.replace("'", "").replace('"', '').replace("`", "")
+        self.adb.run_command(["shell", "input", "text", safe_text], serial)
+        time.sleep(0.5)
 
     def force_kick_chat(self):
         """Fuerza a todos los dispositivos activos a enviar un comentario inmediatamente."""

@@ -3463,6 +3463,15 @@ class ProxyFarmApp(ctk.CTk):
             
         threading.Thread(target=_rescue_process, daemon=True).start()
 
+    def _type_text_human(self, serial, text):
+        import time
+        for char in text:
+            if char == " ":
+                self.adb.run_command(["shell", "input", "text", "%s"], serial)
+            else:
+                self.adb.run_command(["shell", "input", "text", char], serial)
+            time.sleep(0.1)
+
     def interact_kick_stream(self, s):
         import time
         import random

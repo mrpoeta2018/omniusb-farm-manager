@@ -2901,19 +2901,23 @@ class ProxyFarmApp(ctk.CTk):
     def watchdog_ghost_loop(self):
         import random
         while True:
-            time.sleep(60) # Wait 60 seconds before checking
+            time.sleep(5) # Ciclo principal rápido
             try:
                 if not hasattr(self, 'engine') or not self.engine.active_devices:
+                    time.sleep(5)
                     continue
                     
                 for dev in list(self.engine.active_devices):
                     serial = dev['serial']
                     
+                    # Rotación secuencial: 10 segundos entre cada celular
+                    time.sleep(10)
+                    
                     if self.is_device_locked(serial):
                         continue
                     
                     # Watchdog: Every 10 mins (approx 10% chance per minute to check app focus)
-                    if self.watchdog_enabled.get() and random.randint(1, 10) == 1:
+                    if self.watchdog_enabled.get() and random.randint(1, 6) == 1:
                         out_tuple = self.adb.run_command(["shell", "dumpsys", "window", "windows", "|", "grep", "-E", "'mCurrentFocus|mFocusedApp'"], serial)
                         out = out_tuple[0] if isinstance(out_tuple, tuple) else out_tuple
                         if out:
@@ -2963,10 +2967,10 @@ class ProxyFarmApp(ctk.CTk):
                                     playlists = [p.strip() for p in self.playlist_textbox.get("1.0", "end").strip().split('\n') if p.strip()]
                                     if playlists: self._inject_playlist_to_single(serial, random.choice(playlists))
 
-                    # Ghost Touch Inteligente (Aprox cada 15 min)
-                    if self.ghost_enabled.get() and random.randint(1, 15) == 1:
+                    # Ghost Touch Inteligente (Escaner Rápido de YouTube)
+                    if self.ghost_enabled.get():
                         if not getattr(self, '_is_spotify_playing', lambda x: True)(serial):
-                            self.log_msg(f" 👻 Toque Fantasma Inteligente en {serial[-4:]}: Audio Pausado, reanudando...", "warn")
+                            self.log_msg(f" 👻 Escáner Anti-Pausa: Audio Pausado en {serial[-4:]}. Buscando cartel...", "warn")
                             
                             # 1. Intentar aceptar pop-up de YT Music ("¿Quieres seguir mirándolo?")
                             root = getattr(self, 'pull_and_parse', lambda x: None)(serial)
@@ -2977,18 +2981,24 @@ class ProxyFarmApp(ctk.CTk):
                                         self.log_msg(f" 👆 Popup de 'Seguir mirándolo' aceptado en {serial[-4:]}.", "success")
                                         time.sleep(1)
 
-                            # 2. Tocar parte superior para cerrar anuncios
-                            self.adb.run_command(["shell", "input", "tap", "360", "300"], serial)
+                            # 2. Tocar parte superior para cerrar anuncios (Opcional, si tap 360,300 pausa, mejor dar play primero)
+                            self.adb.run_command(["shell", "input", "tap", "360", "200"], serial)
                             time.sleep(1)
 
                             # 3. Dar Play (85) y Adelantar (87) para forzar reactivación
-                            self.adb.run_command(["shell", "input", "keyevent", "85"], serial)
+                            self.adb.run_command(["shell", "input", "keyevent", "85"], serial) # Play
                             time.sleep(1)
-                            self.adb.run_command(["shell", "input", "keyevent", "87"], serial)
+                            self.adb.run_command(["shell", "input", "keyevent", "87"], serial) # Next (Adelantar)
                         
                         else:
-                            # 4. Si YA está sonando bien, solo hacemos un ajuste humano invisible (volumen aleatorio 20% de las veces)
-                            if random.randint(1, 5) == 1:
+                            # 4. Si YA está sonando bien (Play activo)
+                            # Aleatoriamente adelantamos la cancion/video para saltar posibles anuncios o mantener el flujo
+                            if random.randint(1, 10) == 1:
+                                self.log_msg(f" ⏭️ Escáner Activo: Adelantando pista en {serial[-4:]} para fluidez...", "info")
+                                self.adb.run_command(["shell", "input", "keyevent", "87"], serial) # Next
+                                
+                            # Ocasionalmente un ajuste humano (volumen invisible)
+                            elif random.randint(1, 5) == 1:
                                 for _ in range(15):
                                     self.adb.run_command(["shell", "input", "keyevent", "25"], serial)
                                 time.sleep(0.5)

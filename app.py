@@ -2934,8 +2934,17 @@ class ProxyFarmApp(ctk.CTk):
                                 root = getattr(self, 'pull_and_parse', lambda x: None)(serial)
                                 if root is not None:
                                     texts = [n.get("text", "").lower() for n in root.iter("node")]
+                                    needs_rescue = False
                                     if "featured creators" in texts or "top live categories" in texts:
-                                        self.log_msg(f"🚑 Protocolo de Rescate: {serial[-4:]} se perdió en el menú de Kick. Relanzando...", "error")
+                                        needs_rescue = True
+                                    elif "go back" in texts or "volver" in texts:
+                                        self.log_msg(f"💥 [{serial[-4:]}] Error de red en Kick ('Go Back'/'Volver'). Rescatando...", "warn")
+                                        self.find_and_click_by_text(serial, ["go back", "volver"])
+                                        import time; time.sleep(2)
+                                        needs_rescue = True
+                                        
+                                    if needs_rescue:
+                                        self.log_msg(f"🚑 Protocolo de Rescate: {serial[-4:]} fuera del Live. Relanzando...", "error")
                                         if hasattr(self, 'kick_textbox'):
                                             urls = [u.strip() for u in self.kick_textbox.get("1.0", "end").strip().split("\n") if u.strip()]
                                             if urls:
@@ -3402,9 +3411,15 @@ class ProxyFarmApp(ctk.CTk):
                 out_tuple = self.adb.run_command(["shell", "dumpsys", "window", "windows", "|", "grep", "-E", "'mCurrentFocus|mFocusedApp'"], s)
                 out = out_tuple[0] if isinstance(out_tuple, tuple) else out_tuple
                 if out and "com.kick.mobile" in out:
-                    if random.randint(1, 100) <= 60: # 60% prob de hablar en cada ciclo
-                        self.log_msg(f"💬 [{s[-4:]}] Comentando en Kick...", "info")
-                        self._kick_chat_engine(s)
+                    root = getattr(self, 'pull_and_parse', lambda x: None)(s)
+                    if root is not None:
+                        texts = [n.get("text", "").lower() for n in root.iter("node")]
+                        if "go back" in texts or "volver" in texts or "featured creators" in texts or "top live categories" in texts:
+                            self.log_msg(f"🚨 [{s[-4:]}] App trabada o en menú antes de chatear. Ignorando chat para que el Rescatista actúe.", "warn")
+                        else:
+                            if random.randint(1, 100) <= 60: # 60% prob de hablar en cada ciclo
+                                self.log_msg(f"💬 [{s[-4:]}] Comentando en Kick...", "info")
+                                self._kick_chat_engine(s)
                 
                 time.sleep(10) # 10 segundos de espera entre celular y celular para no saturar
 
@@ -3427,8 +3442,17 @@ class ProxyFarmApp(ctk.CTk):
                     root = getattr(self, 'pull_and_parse', lambda x: None)(s)
                     if root is not None:
                         texts = [n.get("text", "").lower() for n in root.iter("node")]
+                        needs_rescue = False
                         if "featured creators" in texts or "top live categories" in texts:
-                            self.log_msg(f"🔍 [{s[-4:]}] Extraviado. Rescatando...", "warn")
+                            needs_rescue = True
+                        elif "go back" in texts or "volver" in texts:
+                            self.log_msg(f"💥 [{s[-4:]}] Error de Kick ('Go Back'). Presionando...", "warn")
+                            self.find_and_click_by_text(s, ["go back", "volver"])
+                            time.sleep(2)
+                            needs_rescue = True
+                            
+                        if needs_rescue:
+                            self.log_msg(f"🔍 [{s[-4:]}] Extraviado. Rescatando e inyectando de nuevo...", "warn")
                             urls = [u.strip() for u in self.kick_textbox.get("1.0", "end").strip().split("\n") if u.strip()]
                             if urls:
                                 import random

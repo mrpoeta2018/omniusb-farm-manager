@@ -3046,15 +3046,42 @@ class ProxyFarmApp(ctk.CTk):
 
     def stop_social_bots(self):
         self.stop_social_threads = True
-        self.log_msg(" Deteniendo Redes y cerrando apps...", "warn")
-        if hasattr(self, 'engine') and getattr(self.engine, 'active_devices', []):
-            for dev in self.engine.active_devices:
-                s = dev['serial']
-                self.adb.run_command(["shell", "am", "force-stop", "com.instagram.android"], s)
-                self.adb.run_command(["shell", "am", "force-stop", "com.kick.mobile"], s)
-                self.adb.run_command(["shell", "input", "keyevent", "3"], s)
-        import tkinter.messagebox as mb
-        mb.showinfo("Redes Detenidas", "Se han detenido todas las tareas de redes sociales y se han cerrado las aplicaciones.\n\nLos celulares están listos para volver a farmear Spotify.")
+        self.log_msg("🛑 Iniciando detención controlada de Redes...", "warn")
+        
+        # Crear un modal que bloquee la UI
+        import customtkinter as ctk
+        modal = ctk.CTkToplevel(self)
+        modal.title("Deteniendo Redes")
+        modal.geometry("400x200")
+        modal.attributes('-topmost', True)
+        modal.grab_set() # Bloquear la ventana principal
+        modal.protocol("WM_DELETE_WINDOW", lambda: None) # Deshabilitar boton X
+        
+        lbl = ctk.CTkLabel(modal, text="Deteniendo dispositivos uno por uno...\nPor favor espera, no cierres la app.", font=("Arial", 14, "bold"))
+        lbl.pack(expand=True)
+        
+        import threading
+        import time
+        
+        def _stop_process():
+            if hasattr(self, 'engine') and getattr(self.engine, 'active_devices', []):
+                total = len(self.engine.active_devices)
+                for i, dev in enumerate(self.engine.active_devices):
+                    s = dev['serial']
+                    lbl.configure(text=f"Deteniendo dispositivo {i+1} de {total}...\n[{s[-4:]}]")
+                    self.adb.run_command(["shell", "am", "force-stop", "com.instagram.android"], s)
+                    self.adb.run_command(["shell", "am", "force-stop", "com.kick.mobile"], s)
+                    self.adb.run_command(["shell", "input", "keyevent", "3"], s)
+                    time.sleep(2) # Pausa de 2 segundos entre cada telefono para evitar que ADB colapse
+            
+            # Al terminar
+            lbl.configure(text="✅ Todas las redes detenidas.\nCelulares listos.")
+            time.sleep(1.5)
+            modal.grab_release()
+            modal.destroy()
+            self.log_msg("✅ Redes detenidas con éxito y de forma segura.", "success")
+            
+        threading.Thread(target=_stop_process, daemon=True).start()
 
     def interact_ig_post(self, s):
         self.log_msg(f"Iniciando interacción avanzada en {s}...", "info")
@@ -3348,40 +3375,97 @@ class ProxyFarmApp(ctk.CTk):
         self.adb.run_command(["shell", "input", "keyevent", "4"], serial) # Ocultar teclado
         self.log_msg(f"✅ Comentario enviado con éxito.", "success")
 
+    def _continuous_kick_chat_loop(self):
+        import time
+        import random
+        while True:
+            if getattr(self, "stop_social_threads", False):
+                self._kick_chat_thread_active = False
+                break
+                
+            time.sleep(120) # Pausa de 2 minutos antes de cada ciclo global
+            
+            if not hasattr(self, 'engine') or not self.engine.active_devices:
+                continue
+                
+            self.log_msg("🗣️ [KICK CHAT] Iniciando ciclo de interacciones globales...", "info")
+            
+            for dev in list(self.engine.active_devices):
+                if getattr(self, "stop_social_threads", False):
+                    break
+                    
+                s = dev['serial']
+                if self.is_device_locked(s):
+                    continue
+                
+                # Check si está en la app de kick
+                out_tuple = self.adb.run_command(["shell", "dumpsys", "window", "windows", "|", "grep", "-E", "'mCurrentFocus|mFocusedApp'"], s)
+                out = out_tuple[0] if isinstance(out_tuple, tuple) else out_tuple
+                if out and "com.kick.mobile" in out:
+                    if random.randint(1, 100) <= 60: # 60% prob de hablar en cada ciclo
+                        self.log_msg(f"💬 [{s[-4:]}] Comentando en Kick...", "info")
+                        self._kick_chat_engine(s)
+                
+                time.sleep(10) # 10 segundos de espera entre celular y celular para no saturar
+
+    def _manual_kick_rescue(self):
+        """Boton manual de rescate Kick"""
+        if not hasattr(self, 'engine') or not self.engine.active_devices:
+            return
+            
+        import threading
+        def _rescue_process():
+            self.log_msg("🚑 Iniciando Rescate Manual de Kick...", "warn")
+            for dev in list(self.engine.active_devices):
+                s = dev['serial']
+                
+                if self.is_device_locked(s): continue
+                
+                out_tuple = self.adb.run_command(["shell", "dumpsys", "window", "windows", "|", "grep", "-E", "'mCurrentFocus|mFocusedApp'"], s)
+                out = out_tuple[0] if isinstance(out_tuple, tuple) else out_tuple
+                if out and "com.kick.mobile" in out:
+                    root = getattr(self, 'pull_and_parse', lambda x: None)(s)
+                    if root is not None:
+                        texts = [n.get("text", "").lower() for n in root.iter("node")]
+                        if "featured creators" in texts or "top live categories" in texts:
+                            self.log_msg(f"🔍 [{s[-4:]}] Extraviado. Rescatando...", "warn")
+                            urls = [u.strip() for u in self.kick_textbox.get("1.0", "end").strip().split("\n") if u.strip()]
+                            if urls:
+                                import random
+                                streamer = random.choice(urls).rstrip('/').split('/')[-1]
+                                self._kick_search_and_enter(s, streamer, is_slow=False)
+                            time.sleep(5)
+            self.log_msg("✅ Rescate Manual Completado.", "success")
+            
+        threading.Thread(target=_rescue_process, daemon=True).start()
+
     def interact_kick_stream(self, s):
         import time
-        # === 1. Auto-Seguidor (Follow) ===
-        self.log_msg(f"Intentando dar Follow en {s}...", "info")
-        
-        # Toque 1: Despertar la pantalla / Overlay del video
-        self.adb.run_command(["shell", "input", "tap", "360", "400"], s)
-        time.sleep(1.5)
-        
-        # Toque 2: Toques ciegos al boton verde grande de Seguir (Supera el escudo invisible)
-        self.log_msg("Lanzando toques francotirador al boton verde de Seguir...", "info")
-        self.adb.run_command(["shell", "input", "tap", "380", "400"], s)
-        time.sleep(0.5)
-        self.adb.run_command(["shell", "input", "tap", "380", "450"], s)
-        time.sleep(1)
-        
-        # Fallback de lectura (por si acaso cambió de posición)
-        if self.find_and_click_by_text(s, ["follow", "seguir"]):
-            pass
-            
-        self.log_msg(f"✅ ¡Se superó el escudo de seguidores en {s}!", "success")
-        time.sleep(1)
-
-        # === 2. Aceptar Reglas del Chat ===
-        self.log_msg(f"Buscando reglas de chat en {s}...", "info")
-        click_rules = self.find_and_click_by_text(s, ["accept", "aceptar", "start chatting", "agree", "entendido"])
-        if not click_rules:
-            self.adb.run_command(["shell", "input", "tap", "360", "1100"], s)
-        time.sleep(2)
-
-        # === 3. Primer saludo al entrar (40% de probabilidad) ===
         import random
-        if random.random() < 0.4:
-            self._kick_chat_engine(s)
+        # === 1. Confirmación de Chat (Saludo Multi-Idioma) ===
+        self.log_msg(f"👋 [{s[-4:]}] Buscando caja de chat para saludar...", "info")
+        
+        # Despertar teclado / pantalla por si acaso
+        self.adb.run_command(["shell", "input", "tap", "360", "400"], s)
+        time.sleep(1.0)
+        
+        click_chat = self.find_and_click_by_text(s, ["send a message", "enviar mensaje", "chat", "mensaje", "escribe un mensaje", "chatear"])
+        
+        if click_chat:
+            self.log_msg(f"✅ [{s[-4:]}] Caja de chat localizada. Escribiendo...", "success")
+            time.sleep(1.0)
+            
+            greetings = [
+                "hola", "hello", "buenas", "hi", "que tal", 
+                "saludos", "que onda", "hey", "whats up", "w stream"
+            ]
+            msg = random.choice(greetings)
+            
+            self._type_text_human(s, msg)
+            time.sleep(0.5)
+            self.adb.run_command(["shell", "input", "keyevent", "66"], s) # ENTER
+        else:
+            self.log_msg(f"⚠️ [{s[-4:]}] No se vio la caja de chat de inmediato. Ignorando.", "warn")
 
     def inject_kick(self):
         self.stop_social_threads = False

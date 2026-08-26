@@ -3475,6 +3475,26 @@ class ProxyFarmApp(ctk.CTk):
                 self.adb.run_command(["shell", "input", "text", char], serial)
             time.sleep(0.1)
 
+    def force_kick_chat(self):
+        """Fuerza a todos los dispositivos activos a enviar un comentario inmediatamente."""
+        if not hasattr(self, 'engine') or not self.engine.active_devices:
+            self.log_msg(" [Error] No hay dispositivos activos para comentar.", "error")
+            return
+        self.log_msg(" [Kick] Forzando comentario masivo en vivo...", "info")
+        import threading
+        for dev in self.engine.active_devices:
+            s = dev['serial']
+            threading.Thread(target=self._kick_chat_engine, args=(s,), daemon=True).start()
+
+    def get_random_kick_message(self):
+        import random
+        txt = self.kick_textbox.get("1.0", "end-1c").strip()
+        if not txt:
+            messages = ["Holaaa", "Llegandooo", "Dejando mi apoyo!", "Buenaaas", "Saludos!!", "Epico!!"]
+        else:
+            messages = [line.strip() for line in txt.split("\n") if line.strip()]
+        return random.choice(messages)
+
     def interact_kick_stream(self, s):
         import time
         import random

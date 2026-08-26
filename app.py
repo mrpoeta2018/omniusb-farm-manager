@@ -4000,6 +4000,12 @@ class ProxyFarmApp(ctk.CTk):
                 self.acc_log(f" [{serial[-4:]}] Esperando 40s a que procese el inicio de sesión...", "info")
                 s_sleep(40) # Aumentado a 40s porque Kick demora mucho en autenticar el correo
                 
+                # Omitir pantalla de Onboarding ("Cuéntanos un poco sobre ti" -> "Tal vez después")
+                click_onboarding = self.find_and_click_by_text(serial, ["tal vez despu", "maybe later", "omitir", "skip"], do_swipe=False)
+                if click_onboarding:
+                    self.acc_log(f" [{serial[-4:]}] Pantalla de bienvenida saltada ('Tal vez después')...", "info")
+                    s_sleep(5)
+                
                 # VERIFICACION FINAL (Segundo check)
                 self.acc_log(f" [{serial[-4:]}] Realizando segundo check para confirmar inicio de sesion...", "info")
                 root2 = getattr(self, 'pull_and_parse', lambda x: None)(serial)

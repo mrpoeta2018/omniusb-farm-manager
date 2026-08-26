@@ -3968,7 +3968,7 @@ class ProxyFarmApp(ctk.CTk):
                 texts = [n.get("text", "").lower() for n in root.iter("node")]
                 
                 # Si vemos los botones de login directo, cortamos y logueamos.
-                if any("log in" in t or "iniciar sesi" in t or "sign up" in t for t in texts):
+                if any("log in" in t or "iniciar" in t or "inicia" in t or "sign up" in t for t in texts):
                     needs_login = True
                     break
                     
@@ -4021,22 +4021,8 @@ class ProxyFarmApp(ctk.CTk):
         try:
             self.acc_log(f" [{serial[-4:]}] Iniciando Login con Google en KICK...", "info")
             
-            # --- SMART PRE-CHECK ---
             self._force_portrait(serial)
-            self.adb.run_command(["shell", "am", "start", "-n", "com.kick.mobile/com.kick.mobile.MainActivity"], serial)
-            s_sleep(8.0) # Kick es lento para abrir
-            
-            root = getattr(self, 'pull_and_parse', lambda x: None)(serial)
-            if root is not None:
-                texts = [n.get("text", "").lower() for n in root.iter("node")]
-                if not any("log in" in t or "iniciar" in t or "sign up" in t for t in texts):
-                    self.acc_log(f" [{serial[-4:]}] ✅ KICK YA TIENE SESIÓN ACTIVA. Saltando.", "success")
-                    if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
-                        self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ✅", text_color="#10B981"))
-                    return True
-                    
-            self.acc_log(f" [{serial[-4:]}] Sin sesión. Limpiando y logueando...", "warn")
-            # -----------------------
+            self.acc_log(f" [{serial[-4:]}] Limpiando Kick para Iniciar Sesin...", "warn")
             
             # Orden inteligente: Probar primero el índice que funcionó la vez pasada, luego los demás
             last_working_index = email_memory.get(serial, 0)

@@ -3931,6 +3931,52 @@ class ProxyFarmApp(ctk.CTk):
         self.after(0, lambda: self.btn_google_login.configure(state="normal", text="🤖 3. Login Automático (Vía Google)"))
         self.acc_log("=== LOGIN GOOGLE FINALIZADO ===", "success")
 
+    def start_kick_google_login(self):
+        if not hasattr(self, 'engine') or not self.engine.active_devices:
+            self.acc_log(" [Error] No hay dispositivos activos.", "error")
+            return
+            
+        selected = [dev for dev in self.engine.active_devices if dev['serial'] in self.acc_device_checkboxes and self.acc_device_checkboxes[dev['serial']].get()]
+        if not selected:
+            # If no accounts are selected, just do all active devices
+            selected = self.engine.active_devices
+            
+        self.acc_log(f" [Kick] Iniciando Verificación/Login en {len(selected)} dispositivos...", "info")
+        import threading
+        threading.Thread(target=self._master_kick_google_login_thread, args=(selected,), daemon=True).start()
+
+    def _master_kick_google_login_thread(self, selected):
+        import time
+        import xml.etree.ElementTree as ET
+        for i, dev in enumerate(selected):
+            s = dev['serial']
+            self.acc_log(f" [{s[-4:]}] Verificando sesión actual de Kick...", "info")
+            self.adb.run_command(["shell", "am", "force-stop", "com.kick.mobile"], s)
+            time.sleep(1)
+            self.adb.run_command(["shell", "am", "start", "-n", "com.kick.mobile/com.kick.mobile.MainActivity"], s)
+            time.sleep(8)
+            root = getattr(self, 'pull_and_parse', lambda x: None)(s)
+            
+            needs_login = False
+            if root is not None:
+                texts = [n.get("text", "").lower() for n in root.iter("node")]
+                if any("log in" in t or "iniciar sesi" in t or "sign up" in t for t in texts):
+                    needs_login = True
+            else:
+                needs_login = True # Por si falla el dump
+                
+            if needs_login:
+                self.acc_log(f" [{s[-4:]}] Kick cerrado. Iniciando Auto-Login...", "warn")
+                success = self._kick_google_login_thread(s)
+                if not success:
+                    self.acc_log(f" [{s[-4:]}] Falló login de Kick.", "error")
+            else:
+                self.acc_log(f" [{s[-4:]}] ✅ Sesión confirmada en Kick. Omitiendo...", "success")
+                if hasattr(self, 'acc_device_checkboxes') and s in self.acc_device_checkboxes:
+                    self.after(0, lambda s=s: self.acc_device_checkboxes[s].configure(text=f"{s} ✅", text_color="#10B981"))
+            time.sleep(2)
+        self.acc_log(" [Kick] Proceso de Verificación/Login Terminado.", "success")
+
     def _kick_google_login_thread(self, serial):
         import time
         import json

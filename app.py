@@ -3935,7 +3935,7 @@ class ProxyFarmApp(ctk.CTk):
             # --- SMART PRE-CHECK ---
             self._force_portrait(serial)
             self.adb.run_command(["shell", "am", "start", "-n", "com.kick.mobile/com.kick.mobile.MainActivity"], serial)
-            s_sleep(4.0)
+            s_sleep(8.0) # Kick es lento para abrir
             
             root = getattr(self, 'pull_and_parse', lambda x: None)(serial)
             if root is not None:
@@ -3954,23 +3954,27 @@ class ProxyFarmApp(ctk.CTk):
                 
                 self.adb.run_command(["shell", "am", "force-stop", "com.kick.mobile"], serial)
                 self.adb.run_command(["shell", "pm", "clear", "com.kick.mobile"], serial)
-                s_sleep(1)
+                s_sleep(2)
                 self.adb.run_command(["shell", "am", "start", "-n", "com.kick.mobile/com.kick.mobile.MainActivity"], serial)
-                s_sleep(5)
+                
+                self.acc_log(f" [{serial[-4:]}] Esperando 20 segundos a que Kick cargue...", "info")
+                s_sleep(20) # 20 SEGUNDOS COMO PIDIO EL USUARIO
                 
                 # Iniciar Sesion (Barra superior)
                 click_login = self.find_and_click_by_text(serial, ["iniciar sesi", "log in"], do_swipe=False)
                 if not click_login:
-                    self.acc_log(f" [{serial[-4:]}] Respaldo: Toque 'Iniciar sesión'...", "warn")
-                    self.adb.run_command(["shell", "input", "tap", "240", "50"], serial)
-                s_sleep(4)
+                    self.acc_log(f" [{serial[-4:]}] ❌ No se encontro boton 'Iniciar sesion'. Reintentando...", "error")
+                    continue # No hacemos toque ciego para evitar ir a la Play Store
+                    
+                s_sleep(8)
                 
                 # Continuar con Google
                 click_google = self.find_and_click_by_text(serial, ["continuar con google", "continue with google", "google"], do_swipe=False)
                 if not click_google:
-                    self.acc_log(f" [{serial[-4:]}] Respaldo: Toque 'Google'...", "warn")
-                    self.adb.run_command(["shell", "input", "tap", "240", "850"], serial)
-                s_sleep(8)
+                    self.acc_log(f" [{serial[-4:]}] ❌ No se encontro boton 'Google'. Reintentando...", "error")
+                    continue
+                    
+                s_sleep(12)
                 
                 # Seleccionar cuenta Gmail
                 click_email = self.find_and_click_by_text(serial, ["@gmail.com"], do_swipe=True)
@@ -3979,17 +3983,20 @@ class ProxyFarmApp(ctk.CTk):
                     y_offset = 300 + (email_index * 100)
                     self.adb.run_command(["shell", "input", "tap", "240", str(y_offset)], serial)
                 
-                s_sleep(10)
+                s_sleep(15)
                 
-                # Verificar exito
+                # VERIFICACION FINAL (Segundo check)
+                self.acc_log(f" [{serial[-4:]}] Realizando segundo check para confirmar inicio de sesion...", "info")
                 root2 = getattr(self, 'pull_and_parse', lambda x: None)(serial)
                 if root2 is not None:
                     texts2 = [n.get("text", "").lower() for n in root2.iter("node")]
-                    if any("creadores destacados" in t or "tu cuenta" in t for t in texts2):
-                        self.acc_log(f" [{serial[-4:]}] ✅ KICK LOGUEADO CON EXITO.", "success")
+                    if any("creadores destacados" in t or "tu cuenta" in t or "siguiendo" in t or "explorar" in t for t in texts2) and not any("log in" in t or "iniciar sesi" in t for t in texts2):
+                        self.acc_log(f" [{serial[-4:]}] ✅ KICK CONFIRMADO LOGUEADO CON EXITO.", "success")
                         if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
                             self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ✅", text_color="#10B981"))
                         return True
+                    else:
+                        self.acc_log(f" [{serial[-4:]}] ⚠️ Falló la verificación de sesión. Intentando otro correo...", "warn")
                         
             self.acc_log(f" [{serial[-4:]}] ❌ Fallo Login en Kick tras 5 intentos.", "error")
             return False

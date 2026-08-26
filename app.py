@@ -3923,7 +3923,18 @@ class ProxyFarmApp(ctk.CTk):
 
     def _kick_google_login_thread(self, serial):
         import time
+        import json
+        import os
         
+        # Cargar memoria de correos
+        mem_file = "kick_email_memory.json"
+        email_memory = {}
+        if os.path.exists(mem_file):
+            try:
+                with open(mem_file, "r") as mf:
+                    email_memory = json.load(mf)
+            except: pass
+            
         is_slow = getattr(self, "acc_slow_mode_var", type('obj',(object,),{'get':lambda:False})()).get()
         def s_sleep(base_time):
             total = base_time * 2.5 if is_slow else base_time
@@ -3949,7 +3960,11 @@ class ProxyFarmApp(ctk.CTk):
             self.acc_log(f" [{serial[-4:]}] Sin sesión. Limpiando y logueando...", "warn")
             # -----------------------
             
-            for email_index in range(5):
+            # Orden inteligente: Probar primero el índice que funcionó la vez pasada, luego los demás
+            last_working_index = email_memory.get(serial, 0)
+            indices_to_try = [last_working_index] + [i for i in range(5) if i != last_working_index]
+            
+            for email_index in indices_to_try:
                 if getattr(self, 'stop_signup', False): break
                 
                 self.adb.run_command(["shell", "am", "force-stop", "com.kick.mobile"], serial)
@@ -3976,14 +3991,14 @@ class ProxyFarmApp(ctk.CTk):
                     
                 s_sleep(12)
                 
-                # Seleccionar cuenta Gmail
-                click_email = self.find_and_click_by_text(serial, ["@gmail.com"], do_swipe=True)
-                if not click_email:
-                    self.acc_log(f" [{serial[-4:]}] No se vio el correo, asumiendo indice {email_index}...", "warn")
-                    y_offset = 300 + (email_index * 100)
-                    self.adb.run_command(["shell", "input", "tap", "240", str(y_offset)], serial)
+                # Seleccionar cuenta Gmail por índice
+                # Hacemos tap directo porque buscar texto siempre le da clic al primer correo de la lista.
+                self.acc_log(f" [{serial[-4:]}] Seleccionando correo en el índice {email_index}...", "info")
+                y_offset = 310 + (email_index * 80)
+                self.adb.run_command(["shell", "input", "tap", "240", str(y_offset)], serial)
                 
-                s_sleep(15)
+                self.acc_log(f" [{serial[-4:]}] Esperando 40s a que procese el inicio de sesión...", "info")
+                s_sleep(40) # Aumentado a 40s porque Kick demora mucho en autenticar el correo
                 
                 # VERIFICACION FINAL (Segundo check)
                 self.acc_log(f" [{serial[-4:]}] Realizando segundo check para confirmar inicio de sesion...", "info")
@@ -3992,6 +4007,14 @@ class ProxyFarmApp(ctk.CTk):
                     texts2 = [n.get("text", "").lower() for n in root2.iter("node")]
                     if any("creadores destacados" in t or "tu cuenta" in t or "siguiendo" in t or "explorar" in t for t in texts2) and not any("log in" in t or "iniciar sesi" in t for t in texts2):
                         self.acc_log(f" [{serial[-4:]}] ✅ KICK CONFIRMADO LOGUEADO CON EXITO.", "success")
+                        
+                        # Guardar en memoria
+                        email_memory[serial] = email_index
+                        try:
+                            with open(mem_file, "w") as mf:
+                                json.dump(email_memory, mf)
+                        except: pass
+                        
                         if hasattr(self, 'acc_device_checkboxes') and serial in self.acc_device_checkboxes:
                             self.after(0, lambda s=serial: self.acc_device_checkboxes[s].configure(text=f"{s} ✅", text_color="#10B981"))
                         return True

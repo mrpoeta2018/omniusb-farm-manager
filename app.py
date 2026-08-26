@@ -4047,6 +4047,18 @@ class ProxyFarmApp(ctk.CTk):
                     
                 s_sleep(8)
                 
+                # --- NUEVO: Ocultar teclado si aparece ---
+                # Kick enfoca automticamente el campo de texto y saca el teclado, tapando el botn de Google.
+                try:
+                    stdout, _, _ = self.adb.run_command(["shell", "dumpsys", "input_method"], serial)
+                    if "mInputShown=true" in stdout:
+                        self.acc_log(f" [{serial[-4:]}] Teclado detectado tapando la pantalla. Ocultando...", "info")
+                        self.adb.run_command(["shell", "input", "keyevent", "4"], serial)
+                        time.sleep(2)
+                except Exception as e:
+                    self.acc_log(f" [{serial[-4:]}] Error checkeando teclado: {e}", "error")
+                # ---------------------------------------
+                
                 # Continuar con Google
                 click_google = self.find_and_click_by_text(serial, ["continuar con google", "continue with google", "google"], do_swipe=False)
                 if not click_google:

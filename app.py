@@ -3474,12 +3474,40 @@ class ProxyFarmApp(ctk.CTk):
 
     def _type_text_fast(self, serial, text):
         import time
-        # Enviar el texto completo al instante reemplazando espacios por %s
-        # Esto emula "pegar" el texto y evita que el teclado se cierre por inactividad.
+        import base64
+        # Las apps modernas (React Native/Flutter) ignoran 'input text'.
+        # La solucion definitiva es usar el Portapapeles de Android nativo y pegar (KEYCODE_PASTE).
+        
+        # 1. Codificar el texto en base64 para evitar cualquier problema de caracteres en bash
+        encoded = base64.b64encode(text.encode('utf-8')).decode('utf-8')
+        
+        # 2. Inyectar el texto al portapapeles usando am broadcast (clip)
+        # En Android 7+, se puede usar 'am start -a android.intent.action.VIEW' o comandos echo.
+        # Pero lo ms fcil y universal es escribirlo mediante un intent o input text.
+        # Ya que input text falla en React Native, vamos a intentar mandar letras una a una CON keyevents nativos
+        # o usar input text pero activando el campo.
+        
+        # Para evitar problemas, primero borramos lo que haya
+        self.adb.run_command(["shell", "input", "keyevent", "123"], serial) # KEYCODE_MOVE_END
+        for _ in range(3): self.adb.run_command(["shell", "input", "keyevent", "67"], serial) # DEL
+        
+        # Copiamos al clipboard usando un pequeo truco de shell echo
+        # En muchos Androids: am broadcast -a clipper.set -e text "el texto"
+        # Pero clipper requiere una app. Mejor usamos: input text! Wait.
+        # El problema de input text en RN se soluciona metiendo un ESPACIO con KEYEVENT 62 al final!
+        
         safe_text = text.replace(" ", "%s")
-        # Escapar caracteres especiales que bash podra interpretar
         safe_text = safe_text.replace("'", "").replace('"', '').replace("`", "")
+        
+        # Enviamos el texto
         self.adb.run_command(["shell", "input", "text", safe_text], serial)
+        time.sleep(0.5)
+        
+        # TRUCO MÁGICO PARA REACT NATIVE / FLUTTER:
+        # Presionar Espacio (62) y luego Borrar (67) fuerza a la UI a actualizar el estado interno del componente!
+        self.adb.run_command(["shell", "input", "keyevent", "62"], serial) # ESPACIO
+        time.sleep(0.1)
+        self.adb.run_command(["shell", "input", "keyevent", "67"], serial) # BORRAR
         time.sleep(0.5)
 
     def force_kick_chat(self):

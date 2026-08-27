@@ -21,8 +21,8 @@ if not errorlevel 1 (
         git init
         git remote add origin https://github.com/mrpoeta2018/omniusb-farm-manager.git
         git fetch origin
-        git branch -M main
-        git checkout -f main
+        git branch -M marketingeo
+        git checkout -f marketingeo
         echo [OK] Git configurado correctamente.
         echo(
     )

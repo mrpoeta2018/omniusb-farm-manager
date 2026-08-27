@@ -75,7 +75,7 @@ print("[*] Configurando interfaz visual...")
 try:
     # Forzar modo oscuro directo evita que el módulo 'darkdetect' falle en PCs sin monitor (Headless/VPS)
     ctk.set_appearance_mode("Dark")
-    ctk.set_default_color_theme("dark-blue")
+    ctk.set_default_color_theme("green")
     # Forzar el escalado evita que Windows intente leer la resolución de un monitor inexistente
     ctk.set_widget_scaling(1.0)
     ctk.set_window_scaling(1.0)
@@ -744,9 +744,10 @@ class ProxyFarmApp(ctk.CTk):
         self.update_timer()
         self.update_traffic()
         self._check_updates()
-        threading.Thread(target=self.media_bot_loop, daemon=True).start()
-        threading.Thread(target=self.media_rotator_loop, daemon=True).start()
-        threading.Thread(target=self.watchdog_ghost_loop, daemon=True).start()
+        if getattr(self, "app_mode", "music") == "music":
+            threading.Thread(target=self.media_bot_loop, daemon=True).start()
+            threading.Thread(target=self.media_rotator_loop, daemon=True).start()
+            threading.Thread(target=self.watchdog_ghost_loop, daemon=True).start()
 
     def toggle_compact(self):
         """Alterna entre modo completo y modo bolsillo (solo controles)."""
@@ -3530,33 +3531,68 @@ class ProxyFarmApp(ctk.CTk):
             messages = [line.strip() for line in txt.split("\n") if line.strip()]
         return random.choice(messages)
 
+    def _type_text_human(self, serial, text):
+        import time
+        for char in text:
+            if char == " ":
+                self.adb.run_command(["shell", "input", "text", "%s"], serial)
+            else:
+                self.adb.run_command(["shell", "input", "text", char], serial)
+            time.sleep(0.1)
+
     def interact_kick_stream(self, s):
         import time
         import random
-        # === 1. Confirmación de Chat (Saludo Multi-Idioma) ===
-        self.log_msg(f"👋 [{s[-4:]}] Buscando caja de chat para saludar...", "info")
+        self.log_msg(f" [{s[-4:]}] Buscando caja de chat...", "info")
         
-        # Despertar teclado / pantalla por si acaso
         self.adb.run_command(["shell", "input", "tap", "360", "400"], s)
         time.sleep(1.0)
         
-        click_chat = self.find_and_click_by_text(s, ["send a message", "enviar mensaje", "chat", "mensaje", "escribe un mensaje", "chatear"])
+        # Buscar y abrir la caja de chat
+        root = getattr(self, 'pull_and_parse', lambda x: None)(s)
+        chat_found = False
+        if root is not None:
+            for n in root.iter("node"):
+                text_val = n.get("text", "").lower()
+                desc_val = n.get("content-desc", "").lower()
+                if "mensaje" in text_val or "message" in text_val or "chat" in text_val or "keyboard" in desc_val:
+                    bounds = n.get("bounds", "")
+                    if bounds:
+                        coords = [int(c) for c in bounds.replace("][", ",").replace("[", "").replace("]", "").split(",")]
+                        cx = (coords[0] + coords[2]) // 2
+                        cy = (coords[1] + coords[3]) // 2
+                        self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], s)
+                        chat_found = True
+                        break
         
-        if click_chat:
-            self.log_msg(f"✅ [{s[-4:]}] Caja de chat localizada. Escribiendo...", "success")
-            time.sleep(1.0)
+        if not chat_found:
+            self.adb.run_command(["shell", "input", "tap", "135", "742"], s) # Tap en zona de keyboard de Kick
             
-            greetings = [
-                "hola", "hello", "buenas", "hi", "que tal", 
-                "saludos", "que onda", "hey", "whats up", "w stream"
-            ]
-            msg = random.choice(greetings)
-            
-            self._type_text_human(s, msg)
-            time.sleep(0.5)
-            self.adb.run_command(["shell", "input", "keyevent", "66"], s) # ENTER
-        else:
-            self.log_msg(f"⚠️ [{s[-4:]}] No se vio la caja de chat de inmediato. Ignorando.", "warn")
+        time.sleep(2)
+        
+        msg = self.get_random_kick_message()
+        self.log_msg(f" [{s[-4:]}] Escribiendo msj: {msg}", "info")
+        
+        # Escribir letra por letra como humano para evitar bugs de React Native
+        self._type_text_human(s, msg)
+        time.sleep(0.5)
+        
+        # Enviar (Enter)
+        self.adb.run_command(["shell", "input", "keyevent", "66"], s)
+        time.sleep(0.5)
+        
+        # Pulsar botón SEND físico en pantalla
+        root = getattr(self, 'pull_and_parse', lambda x: None)(s)
+        if root is not None:
+            for n in root.iter("node"):
+                if "send" in n.get("content-desc", "").lower() or "enviar" in n.get("content-desc", "").lower():
+                    bounds = n.get("bounds", "")
+                    if bounds:
+                        coords = [int(c) for c in bounds.replace("][", ",").replace("[", "").replace("]", "").split(",")]
+                        cx = (coords[0] + coords[2]) // 2
+                        cy = (coords[1] + coords[3]) // 2
+                        self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], s)
+                        break
 
     def inject_kick(self):
         self.stop_social_threads = False
@@ -4925,11 +4961,42 @@ class ProxyFarmApp(ctk.CTk):
             
         self.after(0, lambda: self.btn_login_acc.configure(state="normal", text="🚀 2. Iniciar Sesión App (Auto A Ciegas)"))
 
+class AppModeLauncher(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        self.title("Modo de Inicio")
+        self.geometry("400x300")
+        self.eval('tk::PlaceWindow . center')
+        
+        self.mode = None
+        
+        ctk.CTkLabel(self, text="¿Qué deseas hacer hoy?", font=("Arial", 18, "bold")).pack(pady=30)
+        
+        btn_music = ctk.CTkButton(self, text="🎵 Granja de Música (Spotify/YT)", height=50, fg_color="#10B981", hover_color="#059669", 
+                                  font=("Arial", 14, "bold"), command=self.choose_music)
+        btn_music.pack(fill="x", padx=40, pady=10)
+        
+        btn_social = ctk.CTkButton(self, text="📱 Redes Sociales (Kick/IG)", height=50, fg_color="#8B5CF6", hover_color="#7C3AED", 
+                                   font=("Arial", 14, "bold"), command=self.choose_social)
+        btn_social.pack(fill="x", padx=40, pady=10)
+
+    def choose_music(self):
+        self.mode = "music"
+        self.destroy()
+
+    def choose_social(self):
+        self.mode = "social"
+        self.destroy()
+
 if __name__ == "__main__":
     try:
         debug_log("Entrando a Main Loop")
-        app = ProxyFarmApp()
-        app.mainloop()
+        launcher = AppModeLauncher()
+        launcher.mainloop()
+        
+        if launcher.mode:
+            app = ProxyFarmApp(app_mode=launcher.mode)
+            app.mainloop()
     except Exception as e:
         err = f"ERROR CRITICO EN ARRANQUE: {str(e)}"
         print(err)

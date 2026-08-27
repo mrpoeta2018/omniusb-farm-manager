@@ -585,8 +585,9 @@ class ProxyAssignmentWindow(ctk.CTkToplevel):
         self.destroy()
 
 class ProxyFarmApp(ctk.CTk):
-    def __init__(self):
+    def __init__(self, app_mode="music"):
         super().__init__()
+        self.app_mode = app_mode
         self.title("OmniUSB Director 🌍 [Stealth Proxy Edition]")
         self.geometry("1200x900")
         

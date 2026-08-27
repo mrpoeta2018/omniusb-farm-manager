@@ -259,3 +259,11 @@
 [21:10:17] Motores ADB/Runner listos
 [21:10:17] Saltando comprobación de licencia a petición del usuario...
 [21:10:17] Finalizando arranque...
+[04:00:00] Entrando a Main Loop
+[04:00:05] ERROR CRITICO EN ARRANQUE: ProxyFarmApp.__init__() got an unexpected keyword argument 'app_mode'
+[04:00:07] Entrando a Main Loop
+[04:00:11] ERROR CRITICO EN ARRANQUE: ProxyFarmApp.__init__() got an unexpected keyword argument 'app_mode'
+[04:00:13] Entrando a Main Loop
+[04:00:15] ERROR CRITICO EN ARRANQUE: ProxyFarmApp.__init__() got an unexpected keyword argument 'app_mode'
+[04:00:17] Entrando a Main Loop
+[04:00:32] Entrando a Main Loop

@@ -744,6 +744,10 @@ class ProxyFarmApp(ctk.CTk):
         self.update_timer()
         self.update_traffic()
         self._check_updates()
+        # Inicializar sistema de control de acciones y barra de estado
+        self._init_action_manager()
+        self._setup_action_bar()
+
         threading.Thread(target=self.media_bot_loop, daemon=True).start()
         threading.Thread(target=self.media_rotator_loop, daemon=True).start()
         threading.Thread(target=self.watchdog_ghost_loop, daemon=True).start()
@@ -834,8 +838,150 @@ class ProxyFarmApp(ctk.CTk):
             pass
         self.destroy()
 
+
+    # ═══════════════════════════════════════════════════════════════════
+    # ACTION MANAGER - Control central de acciones y barra de estado
+    # ═══════════════════════════════════════════════════════════════════
+
+    ACTION_CONFLICTS = {
+        "spotify":    ["youtube", "yt_music", "awa", "pandora", "audiomack", "apple_music"],
+        "youtube":    ["spotify", "yt_music"],
+        "yt_music":   ["spotify", "youtube"],
+        "awa":        ["spotify"],
+        "pandora":    ["spotify"],
+        "audiomack":  ["spotify"],
+        "apple_music":["spotify"],
+        "kick":       ["ig"],
+        "ig":         ["kick"],
+        "signup":     ["spotify", "youtube", "yt_music", "watchdog"],
+        "login":      ["signup", "logout"],
+        "logout":     ["signup", "login"],
+        "repair":     ["spotify", "youtube", "yt_music"],
+        "watchdog":   ["signup"],
+        "ghost":      [],
+        "media_bot":  [],
+    }
+
+    ACTION_LABELS = {
+        "spotify":    "Spotify",
+        "youtube":    "YouTube",
+        "yt_music":   "YT Music",
+        "awa":        "AWA",
+        "pandora":    "Pandora",
+        "audiomack":  "Audiomack",
+        "apple_music":"Apple Music",
+        "kick":       "Kick",
+        "ig":         "Instagram",
+        "signup":     "Cuentas",
+        "login":      "Login",
+        "logout":     "Logout",
+        "repair":     "Reparar",
+        "watchdog":   "Watchdog",
+        "ghost":      "GhostTouch",
+        "media_bot":  "MediaBot",
+    }
+
+    def _init_action_manager(self):
+        import threading as _th
+        self._running_actions = set()
+        self._action_bar_labels = {}
+
+    def _action_start(self, name):
+        if not hasattr(self, '_running_actions'):
+            self._running_actions = set()
+        self._running_actions.add(name)
+        self.after(0, self._update_action_bar)
+
+    def _action_stop(self, name):
+        if hasattr(self, '_running_actions'):
+            self._running_actions.discard(name)
+        self.after(0, self._update_action_bar)
+
+    def _action_is_running(self, name):
+        return hasattr(self, '_running_actions') and name in self._running_actions
+
+    def _check_conflicts(self, name):
+        if not hasattr(self, '_running_actions'):
+            return []
+        conflicts = self.ACTION_CONFLICTS.get(name, [])
+        return [c for c in conflicts if c in self._running_actions]
+
+    def _can_start(self, name):
+        return len(self._check_conflicts(name)) == 0
+
+    def _action_conflict_msg(self, name):
+        conflicts = self._check_conflicts(name)
+        if not conflicts:
+            return ""
+        names = ", ".join(self.ACTION_LABELS.get(c, c) for c in conflicts)
+        lbl = self.ACTION_LABELS.get(name, name)
+        return f"{lbl} no disponible: [{names}] ya esta corriendo. Detene esa accion primero."
+
+    def _update_action_bar(self):
+        if not hasattr(self, '_action_bar_labels'):
+            return
+        for name, lbl in self._action_bar_labels.items():
+            try:
+                if not lbl.winfo_exists():
+                    continue
+                running = hasattr(self, '_running_actions') and name in self._running_actions
+                icon = "●" if running else "○"
+                short = self.ACTION_LABELS.get(name, name)
+                color = "#10B981" if running else "#4B5563"
+                lbl.configure(text=f"{icon} {short}", text_color=color)
+            except Exception:
+                pass
+
+    def _setup_action_bar(self):
+        """Crea la barra de estado fija en la parte inferior de la ventana."""
+        bar = ctk.CTkFrame(self, fg_color="#0F172A", corner_radius=0, height=38)
+        bar.pack(side="bottom", fill="x")
+        bar.pack_propagate(False)
+
+        ctk.CTkLabel(
+            bar, text="ACCIONES ACTIVAS:", font=("Arial", 10, "bold"),
+            text_color="#64748B"
+        ).pack(side="left", padx=(10, 6), pady=6)
+
+        ctk.CTkFrame(bar, width=2, fg_color="#1E293B", height=30).pack(side="left", fill="y", pady=4, padx=2)
+
+        VISIBLE = ["watchdog", "ghost", "media_bot", "spotify", "youtube",
+                   "yt_music", "kick", "ig", "signup"]
+
+        for name in VISIBLE:
+            short = self.ACTION_LABELS.get(name, name)
+            lbl = ctk.CTkLabel(
+                bar,
+                text=f"o {short}",
+                font=("Arial", 10, "bold"),
+                text_color="#4B5563",
+                cursor="hand2",
+                width=82,
+            )
+            lbl.pack(side="left", padx=3, pady=6)
+            self._action_bar_labels[name] = lbl
+            self.bind_tooltip(lbl, f"Accion: {short}\n(verde = corriendo)")
+
+        self._bar_clock_lbl = ctk.CTkLabel(
+            bar, text="", font=("Arial", 9), text_color="#374151"
+        )
+        self._bar_clock_lbl.pack(side="right", padx=10)
+        self._bar_clock_tick()
+
+    def _bar_clock_tick(self):
+        try:
+            import time as _t
+            ts = _t.strftime("%H:%M:%S")
+            if hasattr(self, '_bar_clock_lbl') and self._bar_clock_lbl.winfo_exists():
+                self._bar_clock_lbl.configure(text=ts)
+            self.after(1000, self._bar_clock_tick)
+        except Exception:
+            pass
+
+
     def media_bot_loop(self):
         import random
+        if hasattr(self, '_action_start'): self.after(0, lambda: self._action_start('media_bot'))
         device_states = {} # serial -> {"next_action_time": float, "songs_played": int}
         
         while True:
@@ -1414,6 +1560,12 @@ class ProxyFarmApp(ctk.CTk):
     def _inject_playlist_to_active(self, playlist_url):
         if not hasattr(self, 'engine') or not getattr(self.engine, 'active_devices', []):
             return
+        if hasattr(self, '_check_conflicts'):
+            conflicts = self._check_conflicts('spotify')
+            if conflicts:
+                self.log_msg(self._action_conflict_msg('spotify'), 'warn')
+                return
+        if hasattr(self, '_action_start'): self._action_start('spotify')
             
         def _mass_inject():
             def worker(dev_serial, delay):
@@ -1656,6 +1808,12 @@ class ProxyFarmApp(ctk.CTk):
     def _inject_youtube_to_active(self, url):
         if not hasattr(self, 'engine') or not self.engine.active_devices:
             return
+        if hasattr(self, '_check_conflicts'):
+            conflicts = self._check_conflicts('youtube')
+            if conflicts:
+                self.log_msg(self._action_conflict_msg('youtube'), 'warn')
+                return
+        if hasattr(self, '_action_start'): self._action_start('youtube')
             
         def _mass_inject():
             for dev in self.engine.active_devices:
@@ -2901,6 +3059,7 @@ class ProxyFarmApp(ctk.CTk):
     def watchdog_ghost_loop(self):
         import random
         import time
+        if hasattr(self, '_action_start'): self.after(0, lambda: self._action_start('watchdog'))
         while True:
             time.sleep(5) # Ciclo principal rápido
             try:
@@ -2912,7 +3071,7 @@ class ProxyFarmApp(ctk.CTk):
                     serial = dev['serial']
                     
                     # Rotación secuencial: 10 segundos entre cada celular
-                    time.sleep(10)
+                    time.sleep(20)  # Fix A: 20s para no saturar ADB
                     
                     if self.is_device_locked(serial):
                         continue
@@ -2958,7 +3117,11 @@ class ProxyFarmApp(ctk.CTk):
                                                 threading.Thread(target=_rescue, args=(serial,), daemon=True).start()
                                                 continue # Skip standard restore
 
-                            if not is_running:
+                            # Fix C: ping ADB previo para no re-inyectar en device offline
+                            _ping_r, _, _ping_c = self.adb.run_command(["shell", "echo", "ok"], serial)
+                            if _ping_c == -2 or "ok" not in _ping_r:
+                                self.log_msg(f"Offline {serial[-4:]}, saltando re-inyeccion", "warn")
+                            elif not is_running:
                                 self.log_msg(f"🛡️ Watchdog: App cerrada en {serial[-4:]}. Restaurando...", "warn")
                                 # Trigger re-injection
                                 if self.master_mode.get() == "spotify":
@@ -2980,11 +3143,16 @@ class ProxyFarmApp(ctk.CTk):
                     # Ghost Touch Inteligente (Escaner Rápido de YouTube)
                     if self.ghost_enabled.get():
                         if not getattr(self, '_is_spotify_playing', lambda x: True)(serial):
+                            # Fix B: no hacer dump caro en la primera pausa
+                            if not hasattr(self, '_ghost_pause_streak'): self._ghost_pause_streak = {}
+                            self._ghost_pause_streak[serial] = self._ghost_pause_streak.get(serial, 0) + 1
+                            _streak = self._ghost_pause_streak[serial]
                             self.log_msg(f" 👻 Escáner Anti-Pausa: Audio Pausado en {serial[-4:]}. Buscando cartel...", "warn")
                             
                             # 1. Intentar aceptar pop-up de YT Music ("¿Quieres seguir mirándolo?")
-                            root = getattr(self, 'pull_and_parse', lambda x: None)(serial)
-                            if root is not None:
+                            if _streak >= 2:
+                              root = getattr(self, 'pull_and_parse', lambda x: None)(serial)
+                              if root is not None:
                                 texts = [n.get("text", "").lower() for n in root.iter("node")]
                                 if any("mir" in t or "pausa" in t for t in texts):
                                     if getattr(self, 'find_and_click_by_text', lambda s, t: False)(serial, ["Sí", "Yes", "Si"]):
@@ -3001,6 +3169,9 @@ class ProxyFarmApp(ctk.CTk):
                             self.adb.run_command(["shell", "input", "keyevent", "87"], serial) # Next (Adelantar)
                         
                         else:
+                            # Reproduciendo OK: resetear streak
+                            if hasattr(self, '_ghost_pause_streak') and serial in self._ghost_pause_streak:
+                                self._ghost_pause_streak[serial] = 0
                             # 4. Si YA está sonando bien (Play activo)
                             # Aleatoriamente adelantamos la cancion/video para saltar posibles anuncios o mantener el flujo
                             if random.randint(1, 10) == 1:
@@ -3009,11 +3180,11 @@ class ProxyFarmApp(ctk.CTk):
                                 
                             # Ocasionalmente un ajuste humano (volumen invisible)
                             elif random.randint(1, 5) == 1:
-                                for _ in range(15):
+                                # Fix E: reducido de 15 a 5 para no saturar ADB
+                                for _ in range(5):
                                     self.adb.run_command(["shell", "input", "keyevent", "25"], serial)
                                 time.sleep(0.5)
-                                for _ in range(random.randint(2, 3)):
-                                    self.adb.run_command(["shell", "input", "keyevent", "24"], serial)
+                                self.adb.run_command(["shell", "input", "keyevent", "24"], serial)
             except Exception as e:
                 pass
 

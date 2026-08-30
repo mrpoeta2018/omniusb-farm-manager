@@ -32,10 +32,9 @@ class ADBManager:
                     return result.stdout.strip(), result.stderr.strip(), result.returncode
                 
                 last_err = result.stderr.strip()
-                # If it's a "device not found" or "offline" error, we might want to wait a bit
-                if "not found" in last_err or "offline" in last_err:
-                    import time
-                    time.sleep(1 * (attempt + 1))
+                # Fix D: device offline/not found -> retornar -2 sin reintentar
+                if "not found" in last_err or "offline" in last_err or "unauthorized" in last_err:
+                    return "", "DEVICE_OFFLINE", -2
             except subprocess.TimeoutExpired:
                 last_err = "Timeout CMD"
             except Exception as e:

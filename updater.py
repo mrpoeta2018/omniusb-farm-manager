@@ -14,11 +14,18 @@ VERSION_FILE = os.path.join(BASE_DIR, "version.json")
 
 
 def get_local_version():
+    default_fallback = {
+        "version": "0.0.0", 
+        "check_url": "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/main/version.json"
+    }
     try:
         with open(VERSION_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+            if not data.get("check_url"):
+                data["check_url"] = default_fallback["check_url"]
+            return data
     except Exception:
-        return {"version": "0.0.0", "check_url": ""}
+        return default_fallback
 
 
 def get_remote_version(check_url):
@@ -152,8 +159,7 @@ def check_for_updates_async(callback):
         local = get_local_version()
         check_url = local.get("check_url", "")
         if not check_url:
-            callback(False, None)
-            return
+            check_url = "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/main/version.json"
 
         remote = get_remote_version(check_url)
         if remote and compare_versions(local.get("version", "0.0.0"), remote.get("version", "0.0.0")):

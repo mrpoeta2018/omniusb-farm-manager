@@ -5298,8 +5298,15 @@ class ProxyFarmApp(ctk.CTk):
 
 if __name__ == "__main__":
     try:
+        import sys
         debug_log("Entrando a Main Loop")
         app = ProxyFarmApp()
+        
+        # Soporte para arranque autonomo desde Agente Supervisor
+        if "--auto" in sys.argv:
+            print("Modo --auto detectado. Iniciando inyeccion automatica en 5 segundos...")
+            app.after(5000, lambda: app.rotation_switch.select() or app.toggle_rotation())
+            
         app.mainloop()
     except Exception as e:
         err = f"ERROR CRITICO EN ARRANQUE: {str(e)}"

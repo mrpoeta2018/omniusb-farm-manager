@@ -226,7 +226,10 @@ class RotationEngine:
         if getattr(self, 'tunnel_disabled', False):
             return
             
-        fail_counts = {}  # serial -> int
+        fail_counts = {}
+        quarantine_strikes = {}
+        quarantine_strikes = {}
+        quarantine_strikes = {} # serial -> int
 
         # Esperar a que los túneles terminen de establecerse antes del primer chequeo
         time.sleep(self._HEALTH_INTERVAL)
@@ -303,6 +306,18 @@ class RotationEngine:
                             if self.app:
                                 self.app.log_msg(
                                     f"❌ {serial} no se pudo reconectar: {reason}", "error")
+                            quarantine_strikes[serial] = quarantine_strikes.get(serial, 0) + 1
+                            if quarantine_strikes[serial] >= 3:
+                                if self.app:
+                                    self.app.log_msg(f" 🚨 CUARENTENA: {serial} falló 3 veces. Se expulsa de la granja.", "error")
+                                    if hasattr(self.app, 'traf_data') and serial in self.app.traf_data:
+                                        self.app.traf_data[serial]['text'] = f"🔴 [{serial}] ERROR CABLE/TÚNEL"
+                                        self.app.traf_data[serial]['color'] = 'red'
+                                        try: self.app.traf_widgets[serial].configure(text=self.app.traf_data[serial]['text'], text_color='red')
+                                        except: pass
+                                self.active_devices = [d for d in self.active_devices if d['serial'] != serial]
+                                if serial in fail_counts: del fail_counts[serial]
+                                continue
 
             # Esperar hasta el próximo ciclo
             for _ in range(self._HEALTH_INTERVAL):

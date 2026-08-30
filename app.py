@@ -2430,6 +2430,16 @@ class ProxyFarmApp(ctk.CTk):
             if type == "warn": sym = "⚠️"
             full_msg = f"{sym} {msg}\n"
             self.log_frame.insert("end", full_msg)
+            
+            # Guardar en archivo
+            try:
+                import os, time
+                log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+                os.makedirs(log_dir, exist_ok=True)
+                log_file = os.path.join(log_dir, f"registro_{time.strftime('%Y-%m-%d')}.txt")
+                with open(log_file, "a", encoding="utf-8") as lf:
+                    lf.write(f"[{time.strftime('%H:%M:%S')}] {full_msg}")
+            except: pass
             self.log_frame.see("end")
             self.log_frame.configure(state="disabled")
             if hasattr(self, 'log_frame_bottom'):

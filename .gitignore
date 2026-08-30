@@ -25,3 +25,7 @@ install_path.txt
 # Logs y temporales
 *.log
 *.tmp
+
+# Agente Supervisor Secrets
+Agente_Supervisor/.env
+Agente_Supervisor/*.json

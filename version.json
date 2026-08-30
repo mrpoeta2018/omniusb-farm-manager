@@ -1,7 +1,7 @@
-﻿{
-    "download_url":  "https://github.com/mrpoeta2018/omniusb-farm-manager/archive/refs/heads/main.zip",
-    "check_url":  "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/main/version.json",
-    "version":  "5.1.0",
-    "release_date":  "2026-08-29",
-    "notes":  "Fix ADB: sleep 20s entre celulares, anti-uiautomator streak, ping previo offline, DEVICE_OFFLINE code, keyevents 5x. ActionManager: barra de estado inferior, deteccion de conflictos entre acciones."
+{
+    "version": "5.2.0",
+    "release_date": "2026-08-29",
+    "check_url": "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/main/version.json",
+    "notes": "Update 5.2.0: Plantillas de Farming, Escudos Anti-Choques completos, Goteo Humano inteligente y Toques Fantasmas silenciosos.",
+    "download_url": "https://github.com/mrpoeta2018/omniusb-farm-manager/archive/refs/heads/main.zip"
 }

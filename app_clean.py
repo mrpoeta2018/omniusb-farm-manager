@@ -73,6 +73,20 @@ class OmniUSBCleanApp(ctk.CTk):
         threading.Thread(target=self._impatient_skip_loop, daemon=True).start()
         threading.Thread(target=self._ad_skipper_loop, daemon=True).start()
         
+        # --- VERIFICACIÓN DE ACTUALIZACIÓN EN SEGUNDO PLANO ---
+        def _bg_check(has_upd, info):
+            if has_upd:
+                self.btn_update.configure(
+                    text="⭐ ¡HAY UNA ACTUALIZACIÓN! ⭐",
+                    fg_color="#DC2626", # Rojo brillante
+                    text_color="#FFFFFF",
+                    hover_color="#991B1B"
+                )
+        try:
+            import updater
+            updater.check_for_updates_async(_bg_check)
+        except: pass
+        
     # =========================================================================
     # UI BUILDER - MODO GUÍA PASO A PASO
     # =========================================================================

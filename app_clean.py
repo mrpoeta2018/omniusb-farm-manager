@@ -101,10 +101,15 @@ class OmniUSBCleanApp(ctk.CTk):
         left_panel = ctk.CTkScrollableFrame(self, border_color="#F59E0B", border_width=2)
         left_panel.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
         
-        # --- BANNER ORO ---
+                # --- BANNER ORO ---
         f_oro = ctk.CTkFrame(left_panel, fg_color="#F59E0B", corner_radius=8)
         f_oro.pack(fill="x", pady=(0, 10))
-        ctk.CTkLabel(f_oro, text="🏆 EDICIÓN ORO FINAL 🏆", font=("Arial", 16, "bold"), text_color="black").pack(pady=5)
+        
+        self.btn_update = ctk.CTkButton(f_oro, text="🔄 Buscar Actualización", fg_color="#000000", hover_color="#333333", text_color="#F59E0B", font=("Arial", 12, "bold"), height=26, command=self.action_check_update)
+        self.btn_update.pack(side="right", padx=10, pady=5)
+        
+        # El titulo va al medio pero le damos padx compensando
+        ctk.CTkLabel(f_oro, text="🏆 EDICIÓN ORO FINAL 🏆", font=("Arial", 16, "bold"), text_color="black").pack(pady=5, expand=True)
 
         
         # --- PASO 1: ESCANEO ---
@@ -182,8 +187,6 @@ class OmniUSBCleanApp(ctk.CTk):
         
         self.btn_creador = ctk.CTkButton(mode_frame, text="👤 Gestor de Cuentas", fg_color="#D946EF", hover_color="#C026D3", width=150, command=self.open_creador)
         self.btn_creador.pack(side="right")
-        self.btn_update = ctk.CTkButton(mode_frame, text="🔄 Actualizar", fg_color="#3B82F6", hover_color="#2563EB", width=100, command=self.action_check_update)
-        self.btn_update.pack(side="right", padx=(0, 5))
         
         # --- CAJAS DE TEXTO (SIEMPRE VISIBLES) ---
         f_boxes = ctk.CTkFrame(left_panel, fg_color="#1E1E1E", corner_radius=8, border_color="#334155", border_width=1)

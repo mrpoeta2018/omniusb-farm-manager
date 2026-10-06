@@ -16,7 +16,7 @@ VERSION_FILE = os.path.join(BASE_DIR, "version.json")
 def get_local_version():
     default_fallback = {
         "version": "0.0.0", 
-        "check_url": "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/main/version.json"
+        "check_url": "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/edicion-oro/version.json"
     }
     try:
         with open(VERSION_FILE, "r", encoding="utf-8") as f:
@@ -46,8 +46,6 @@ def get_remote_version(check_url):
 
 def compare_versions(local_str, remote_str):
     """Returns True if remote is newer than local."""
-    # MODO CONEJILLO DE INDIAS: Bloqueamos actualizaciones para proteger los cambios locales.
-    return False
     try:
         local_parts = [int(x) for x in local_str.split(".")]
         remote_parts = [int(x) for x in remote_str.split(".")]
@@ -66,9 +64,9 @@ def download_update(download_url, callback_progress=None, callback_done=None):
                 if callback_progress:
                     callback_progress("Actualizando desde GitHub (Hard Reset)...")
                 import subprocess
-                subprocess.run(["git", "fetch", "origin", "main"], capture_output=True, text=True, check=True)
-                subprocess.run(["git", "reset", "--hard", "origin/main"], capture_output=True, text=True, check=True)
-                res = subprocess.run(["git", "pull", "origin", "main"], capture_output=True, text=True, check=True)
+                subprocess.run(["git", "fetch", "origin", "edicion-oro"], capture_output=True, text=True, check=True)
+                subprocess.run(["git", "reset", "--hard", "origin/edicion-oro"], capture_output=True, text=True, check=True)
+                res = subprocess.run(["git", "pull", "origin", "edicion-oro"], capture_output=True, text=True, check=True)
                 print("Git pull output:", res.stdout)
                 
                 # Instalar dependencias si cambiaron
@@ -161,7 +159,7 @@ def check_for_updates_async(callback):
         local = get_local_version()
         check_url = local.get("check_url", "")
         if not check_url:
-            check_url = "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/main/version.json"
+            check_url = "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/edicion-oro/version.json"
 
         remote = get_remote_version(check_url)
         if remote and compare_versions(local.get("version", "0.0.0"), remote.get("version", "0.0.0")):

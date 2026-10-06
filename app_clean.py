@@ -8,6 +8,7 @@ Diseño de "Asistente Paso a Paso" con caja de proxies ampliada.
 import os
 import time
 import json
+import updater
 import threading
 import re
 import tkinter as tk
@@ -1662,6 +1663,35 @@ class OmniUSBCleanApp(ctk.CTk):
         
         self.action_start_pilot()
         self.log_msg("🚀 AUTO-ARRANQUE COMPLETADO. ¡FARMING ON!", "success")
+
+    def action_check_update(self):
+        self.log_msg("Buscando actualizaciones en la nube (Edición Oro)...", "info")
+        self.btn_update.configure(state="disabled", text="Buscando...")
+        
+        def _on_result(has_update, remote_info):
+            self.btn_update.configure(state="normal", text="🔄 Actualizar")
+            if has_update and remote_info:
+                ver = remote_info.get("version", "Nueva")
+                msg = f"¡Hay una nueva versión disponible ({ver})!\n\nNovedades:\n{remote_info.get('notes', '')}\n\n¿Deseas descargarla y reiniciar la aplicación ahora?"
+                if messagebox.askyesno("Actualización Disponible", msg):
+                    self.log_msg("Descargando actualización...", "warn")
+                    
+                    def _prog(msg_text):
+                        self.log_msg(msg_text, "info")
+                    def _done(success, err):
+                        if success:
+                            self.log_msg("¡Actualización aplicada con éxito! Reiniciando...", "success")
+                            self.after(2000, self.quit)
+                        else:
+                            self.log_msg(f"Fallo al actualizar: {err}", "error")
+                            messagebox.showerror("Error", f"No se pudo actualizar:\n{err}")
+                    
+                    threading.Thread(target=updater.download_update, args=(remote_info.get("download_url"), _prog, _done), daemon=True).start()
+            else:
+                self.log_msg("Ya tienes la última versión instalada.", "success")
+                messagebox.showinfo("Al día", "Ya tienes la última versión de la Edición Oro instalada.")
+
+        updater.check_for_updates_async(_on_result)
 
 if __name__ == "__main__":
     app = OmniUSBCleanApp()

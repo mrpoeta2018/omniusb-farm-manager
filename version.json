@@ -1,7 +1,7 @@
 {
-    "version": "5.2.0",
-    "release_date": "2026-08-29",
-    "check_url": "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/main/version.json",
-    "notes": "Update 5.2.0: Plantillas de Farming, Escudos Anti-Choques completos, Goteo Humano inteligente y Toques Fantasmas silenciosos.",
-    "download_url": "https://github.com/mrpoeta2018/omniusb-farm-manager/archive/refs/heads/main.zip"
+    "version": "6.0.0",
+    "release_date": "2026-10-06",
+    "check_url": "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/edicion-oro/version.json",
+    "notes": "OmniUSB Edicion Oro: Motor Kick, Diccionario 981 y auto-arranque inteligente.",
+    "download_url": "https://github.com/mrpoeta2018/omniusb-farm-manager/archive/refs/heads/edicion-oro.zip"
 }

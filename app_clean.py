@@ -123,7 +123,7 @@ class OmniUSBCleanApp(ctk.CTk):
         self.btn_update.pack(side="right", padx=10, pady=5)
         
         # El titulo va al medio pero le damos padx compensando
-        ctk.CTkLabel(f_oro, text="🏆 EDICIÓN ORO FINAL 🏆", font=("Arial", 16, "bold"), text_color="black").pack(pady=5, expand=True)
+        ctk.CTkLabel(f_oro, text="⭐🏆 EDICIÓN ORO FINAL 🏆⭐", font=("Arial", 16, "bold"), text_color="black").pack(pady=5, expand=True)
 
         
         # --- PASO 1: ESCANEO ---

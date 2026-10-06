@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "C:\Users\poeta marzo\Desktop\omniusb-farm-manager-main\omniusb-farm-manager\app.py", line 2162, in <module>
+    app = ProxyFarmApp()
+  File "C:\Users\poeta marzo\Desktop\omniusb-farm-manager-main\omniusb-farm-manager\app.py", line 604, in __init__
+    self.engine = RotationEngine(self.adb, self.runner, self.on_update_callback if hasattr(self, "on_update_callback") else self.on_engine_update, app_instance=self)
+                                                                                                                            ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\tkinter\__init__.py", line 2571, in __getattr__
+    return getattr(self.tk, attr)
+AttributeError: '_tkinter.tkapp' object has no attribute 'on_engine_update'

@@ -1,0 +1,40 @@
+len(target_list)
+            current = target_list[self.rot_index_spotify]
+            self.rot_index_spotify += 1
+
+            def _mass_inject():
+                import random
+                import time
+                sp_mode = getattr(self, 'spotify_mode_var', None) and self.spotify_mode_var.get() or "Normal"
+                self.log_msg(f"▶️ [PILOTO AUTO] Inyectando Spotify (Modo: {sp_mode})...", "info")
+                
+                active = getattr(self.engine, 'active_devices', [])
+                if sp_mode in ["Explorar Artistas", "Clonar Copia"]:
+                    for i, dev in enumerate(active):
+                        if getattr(self, "stop_social_threads", False): break
+                        rnd_url = random.choice(target_list)
+                        if sp_mode == "Explorar Artistas":
+                            self._explore_spotify_artists(dev['serial'], rnd_url)
+                            self._inject_playlist_to_single(dev['serial'], rnd_url)
+                        elif sp_mode == "Clonar Copia":
+                            if i > 0: time.sleep(45.0)
+                            self._clone_and_play_playlist(dev['serial'], rnd_url)
+                else:
+                    self._execute_batch(self._inject_playlist_to_single, active, target_list)
+                        
+                self._finalize_injection()
+            import threading
+            
+            def _mass_inject_wrapped():
+                _mass_inject()
+                self._action_stop("spotify")
+                try:
+                    self.after(0, lambda: self.log_msg("✅ Inyección de Spotify finalizada. El Watchdog asume el control.", "success"))
+                except: pass
+            threading.Thread(target=_mass_inject_wrapped, daemon=True).start()
+
+    
+    def _prepare_clean_slate(self):
+        """Corta por lo sano cualquier inyeccion, hilo fantasma o loop anterior antes de un cambio."""
+        import time
+        self.log_msg("🧹 Limpiando procesos anterior

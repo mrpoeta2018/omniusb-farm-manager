@@ -1,0 +1,27 @@
+                       out_tuple = self.adb.run_command(["shell", "dumpsys", "window", "windows", "|", "grep", "-E", "'mCurrentFocus|mFocusedApp'"], serial)
+                        out = out_tuple[0] if isinstance(out_tuple, tuple) else out_tuple
+                        if out:
+                            # Valid audio/video packages
+                            valid_pkgs = ["com.spotify.music", "com.google.android.youtube", "com.google.android.apps.youtube.music",
+                                          "com.pandora.android", "fm.awa.app", "com.audiomack", "com.aspiro.tidal",
+                                          "com.apple.android.music", "com.amazon.mp3", "com.kick.mobile"]
+
+                            is_running = any(pkg in out for pkg in valid_pkgs)
+                            is_kick = "com.kick.mobile" in out
+
+                            if is_kick:
+                                # Sistema de Auto-Curacion Kick
+                                root = getattr(self, 'pull_and_parse', lambda x: None)(serial)
+                                if root is not None:
+                                    texts = [n.get("text", "").lower() for n in root.iter("node")]
+                                    needs_rescue = False
+                                    if "featured creators" in texts or "top live categories" in texts:
+                                        needs_rescue = True
+                                    elif "go back" in texts or "volver" in texts:
+                                        self.log_msg(f"💥 [{serial[-4:]}] Error de red en Kick ('Go Back'/'Volver'). Rescatando...", "warn")
+                                        self.find_and_click_by_text(serial, ["go back", "volver"])
+                                        time.sleep(2)
+                                        needs_rescue = True
+                                        
+                                    if needs_rescue:
+                                        self.log_msg(f"🚑 Protoco

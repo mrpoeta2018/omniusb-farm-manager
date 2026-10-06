@@ -1,0 +1,33 @@
+def inject_manual_youtube(self):
+        # Reset the automatic timer to prevent collisions
+        try:
+            interval_minutes = float(self.playlist_interval.get())
+        except ValueError:
+            interval_minutes = 60.0
+        self.next_injection_time = time.time() + (interval_minutes * 60)
+        self.mixed_turn = "spotify" # If mixed, next one should be spotify
+        
+        urls_raw = self.youtube_textbox.get("1.0", "end").strip().split('\n')
+        urls = [p.strip() for p in urls_raw if p.strip()]
+        if not urls:
+            self.log_msg("⚠️ No hay listas de YouTube para inyectar", "warn")
+            return
+            
+        if hasattr(self, 'engine') and self.engine.active_devices:
+            self.log_msg(f"📺 [MANUAL] Inyectando YouTube Masivo...", "info")
+            import random
+            def _mass_inject():
+                # Barajar como mazo de cartas
+                random.shuffle(urls)
+                self._execute_batch(self._inject_youtube_to_single, self.engine.active_devices, urls)
+            threading.Thread(target=_mass_inject, daemon=True).start()
+        else:
+            self.log_msg("⚠️ El túnel no está iniciado.", "warn")
+
+    def inject_manual_mixed(self):
+        # Reset the automatic timer to prevent collisions
+        try:
+            interval_minutes = float(self.playlist_interval.get())
+        except ValueError:
+            interval_minutes = 60.0
+        self.next_injection_time = time.time() + (interval_minutes 

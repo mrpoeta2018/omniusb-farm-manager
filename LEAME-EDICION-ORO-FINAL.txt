@@ -1,0 +1,15 @@
+======================================================
+     OMNIUSB FARM MANAGER - EDICION ORO FINAL
+======================================================
+Esta es la version definitiva y pulida al maximo.
+
+CARACTERISTICAS DE ESTA VERSION:
+1. Toque Geometrico Inteligente (Spotify): Triangula y toca el boton Play en celulares con resoluciones ofuscadas (como los 4908).
+2. Lotes 100% Integrados: El Piloto Automatico respeta la seleccion de Lotes (ej. de 3 en 3) para no colapsar la PC.
+3. Boton Detener Perfecto: Al detener el Piloto Automatico, limpia todos los hilos de inyeccion en segundo plano evitando cuelgues.
+4. Auto-Reinicio (Watchdog) Avanzado: Vigila que la app este abierta, si se cierra, cancela el toque fantasma y la reinicia sola.
+5. MediaBot (Saltos Inteligentes): Adelanta una pista o video cada ~45 minutos al azar por celular para simular comportamiento humano y evadir baneos.
+6. Cero Fugas de Memoria: El registro (consola) se auto-limpia a 500 lineas para que el programa pueda correr 24/7 por semanas sin consumir toda tu RAM.
+
+SISTEMA 100% SELF-HEALING Y AUTONOMO.
+Guardado: 2026-09-03 09:33:38

@@ -182,6 +182,8 @@ class OmniUSBCleanApp(ctk.CTk):
         
         self.btn_creador = ctk.CTkButton(mode_frame, text="👤 Gestor de Cuentas", fg_color="#D946EF", hover_color="#C026D3", width=150, command=self.open_creador)
         self.btn_creador.pack(side="right")
+        self.btn_update = ctk.CTkButton(mode_frame, text="🔄 Actualizar", fg_color="#3B82F6", hover_color="#2563EB", width=100, command=self.action_check_update)
+        self.btn_update.pack(side="right", padx=(0, 5))
         
         # --- CAJAS DE TEXTO (SIEMPRE VISIBLES) ---
         f_boxes = ctk.CTkFrame(left_panel, fg_color="#1E1E1E", corner_radius=8, border_color="#334155", border_width=1)

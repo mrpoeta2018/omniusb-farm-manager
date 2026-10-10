@@ -1141,6 +1141,8 @@ class MediaInjector:
 
 
     def inject_twitch(self, serial, url, drip_delay=0):
+        import time
+        import re
         if drip_delay > 0:
             time.sleep(drip_delay)
 
@@ -1156,10 +1158,27 @@ class MediaInjector:
 
         self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", f"'{url.strip()}'", "tv.twitch.android.app"], serial)
         
-        for i in range(15):
-            if self._is_cancelled(serial, token): return
-            time.sleep(1)
-
+        # --- LÓGICA DE AUTO-FOLLOW PARA TWITCH ---
+        self.log(f"[{serial[-4:]}] 🟣 Esperando que Twitch cargue para buscar el botón de Seguir...", "info")
+        time.sleep(10) # Esperar a que pase la pantalla de carga de Twitch
+        
+        if self._is_cancelled(serial, token): return
+        
+        # Escanear UI
+        xml_data = self.adb.dump_ui(serial)
+        if xml_data:
+            # Buscar botón Seguir o Follow (case insensitive)
+            match = re.search(r'<node[^>]*text="(?i)(Seguir|Follow)"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml_data)
+            if match:
+                x1, y1, x2, y2 = map(int, match.groups()[1:])
+                cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+                self.log(f"[{serial[-4:]}] 💜 ¡Botón de Follow detectado! Dándole a Seguir...", "success")
+                self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], serial)
+            else:
+                self.log(f"[{serial[-4:]}] 🟣 Ya está siguiendo al canal o el botón no está visible.", "info")
+        else:
+            self.log(f"[{serial[-4:]}] ⚠️ No se pudo escanear la pantalla de Twitch.", "error")
+            
         self.log(f"[{serial[-4:]}] 🟣 TWITCH REPRODUCIENDO CORRECTAMENTE", "success")
 
     def inject_twitch_batch(self, devices, urls, drip_mode="rápido"):
@@ -1580,39 +1599,5 @@ class MediaInjector:
                 delay = i * 1.5
             import threading
             threading.Thread(target=self.inject_ytshorts, args=(serial, url, t_min, t_max, do_like, do_save, do_comment, do_share, delay), daemon=True).start()
-
-
-    def inject_twitch(self, serial, url, drip_delay=0):
-        if drip_delay > 0:
-            time.sleep(drip_delay)
-
-        token = self._new_token(serial)
-        self.log(f"[{serial[-4:]}] 🟣 Iniciando Twitch -> {url[:50]}...", "info")
-        self._mute_device(serial)
-
-        self.adb.run_command(["shell", "am", "force-stop", "tv.twitch.android.app"], serial)
-        self._cleanup_apps(serial, keep_pkg="tv.twitch.android.app")
-        time.sleep(2)
-
-        if self._is_cancelled(serial, token): return
-
-        self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", f"'{url.strip()}'", "tv.twitch.android.app"], serial)
-        
-        for i in range(15):
-            if self._is_cancelled(serial, token): return
-            time.sleep(1)
-
-        self.log(f"[{serial[-4:]}] 🟣 TWITCH REPRODUCIENDO CORRECTAMENTE", "success")
-
-    def inject_twitch_batch(self, devices, urls, drip_mode="rápido"):
-        if not devices or not urls: return
-        self.log(f"🟣 Inyectando Twitch en {len(devices)} dispositivo(s)... (Modo: {drip_mode})", "info")
-        for i, dev in enumerate(devices):
-            url = __import__('random').choice(urls)
-            delay = 0
-            if drip_mode == "rápido" and i > 0: delay = i * __import__('random').randint(3, 8)
-            elif drip_mode == "lento" and i > 0: delay = i * __import__('random').randint(15, 30)
-            elif i > 0: delay = i * 1.5
-            __import__('threading').Thread(target=self.inject_twitch, args=(dev["serial"], url, delay), daemon=True).start()
 
 

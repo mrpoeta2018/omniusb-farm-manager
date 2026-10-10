@@ -1140,9 +1140,10 @@ class MediaInjector:
             threading.Thread(target=self.inject_ytshorts, args=(serial, url, t_min, t_max, do_like, do_save, do_comment, do_share, delay), daemon=True).start()
 
 
-    def inject_twitch(self, serial, url, drip_delay=0):
+    def inject_twitch(self, serial, url, do_text=False, do_emojis=False, chat_interval=5.0, custom_comments=None, drip_delay=0):
         import time
         import re
+        import random
         if drip_delay > 0:
             time.sleep(drip_delay)
 
@@ -1160,15 +1161,16 @@ class MediaInjector:
         
         # --- LÓGICA DE AUTO-FOLLOW PARA TWITCH ---
         self.log(f"[{serial[-4:]}] 🟣 Esperando que Twitch cargue para buscar el botón de Seguir...", "info")
-        time.sleep(10) # Esperar a que pase la pantalla de carga de Twitch
+        time.sleep(10)
         
         if self._is_cancelled(serial, token): return
         
-        # Escanear UI
-        xml_data = self.adb.dump_ui(serial)
+        # Escanear UI para Seguir (si falla, no pasa nada)
+        dump_name = f"/sdcard/dump_twitch_{serial[-4:]}.xml"
+        self.adb.run_command(["shell", "uiautomator", "dump", dump_name], serial)
+        xml_data = self.adb.run_command(["shell", "cat", dump_name], serial)[0]
         if xml_data:
-            # Buscar botón Seguir o Follow (case insensitive)
-            match = re.search(r'<node[^>]*text="(?i)(Seguir|Follow)"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml_data)
+            match = re.search(r'<node[^>]*text="(Seguir|Follow)"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', xml_data, re.IGNORECASE)
             if match:
                 x1, y1, x2, y2 = map(int, match.groups()[1:])
                 cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
@@ -1176,21 +1178,68 @@ class MediaInjector:
                 self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], serial)
             else:
                 self.log(f"[{serial[-4:]}] 🟣 Ya está siguiendo al canal o el botón no está visible.", "info")
-        else:
-            self.log(f"[{serial[-4:]}] ⚠️ No se pudo escanear la pantalla de Twitch.", "error")
             
         self.log(f"[{serial[-4:]}] 🟣 TWITCH REPRODUCIENDO CORRECTAMENTE", "success")
 
-    def inject_twitch_batch(self, devices, urls, drip_mode="rápido"):
+        # --- LÓGICA DE CHAT ---
+        if not do_text and not do_emojis:
+            return
+            
+        self.log(f"[{serial[-4:]}] 💬 Motor de Chat de Twitch Activado (Intervalo: {chat_interval} min)", "info")
+        
+        def send_comment():
+            if self._is_cancelled(serial, token): return
+            
+            # Obtener resolución de pantalla para hacer tap ciego al 95% abajo
+            out = self.adb.run_command(["shell", "wm", "size"], serial)[0]
+            cx, cy = 500, 1500 # Fallback
+            size_match = re.search(r'Physical size: (\d+)x(\d+)', out)
+            if size_match:
+                w, h = map(int, size_match.groups())
+                cx = w // 2
+                cy = int(h * 0.95)
+                
+            self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], serial)
+            time.sleep(1.5)
+            
+            if self._is_cancelled(serial, token): return
+            
+            nonlocal custom_comments
+            custom_comments = custom_comments or ['Siempre firme hoy y siempre', 'Aca apoyando gran mensaje', 'Dios te bendiga un fuerte abrazo', 'Muy interesante desde aca apoyando', 'Dios bendiga tu vida gracias por compartir', 'Sigue confiando en Dios gracias por compartir', 'Sigue asi a seguir asi', 'Oro puro este video exito', 'Increible trabajo me sirve mucho', 'Bendiciones inmensas a seguir asi', 'Sigue confiando en Dios hoy y siempre', 'Buenisimo totalmente de acuerdo', 'Que hermoso mensaje hermano', 'Todo lo puedo en Cristo saludos', 'Que buena vibra!!', 'Amen un fuerte abrazo', 'Genial hoy y siempre', 'De lo mejor que he visto hoy un fuerte abrazo', 'Dios esta en el control totalmente de acuerdo', 'Dios es amor a seguir asi', 'Muy interesante gran mensaje', 'Que el Altisimo te acompane totalmente de acuerdo', 'Que hermoso mensaje a seguir asi', 'Aca apoyando hoy y siempre', 'Dios te bendiga gran mensaje', 'Dios nunca falla hermano', 'Oro puro este video a seguir asi', 'El amor de Dios es infinito totalmente de acuerdo', 'Que Dios te siga usando amigo', 'Me gusto mucho sigue adelante', 'Tremendo aporte amigo', 'Que el Altisimo te acompane!!', 'Siempre firme gran mensaje', 'Sigue confiando en Dios totalmente de acuerdo', 'Me quedo a ver mas hermano', 'Buenisimo cuidese mucho', 'Dios bendiga tu vida cuidese mucho', 'Buenisimo', 'Fuerza y bendiciones no te detengas', 'Dios bendiga tu vida un fuerte abrazo', 'Con Dios todo es posible hoy y siempre', 'Sigue asi me sirve mucho', 'Cristo te ama siempre', 'Genial cuidese mucho', 'Me quedo a ver mas gracias por compartir', 'Que el Senor multiplique tus exitos un fuerte abrazo', 'Que el Senor multiplique tus exitos me sirve mucho', 'Saludos cordiales totalmente de acuerdo', 'Todo lo puedo en Cristo exito', 'A seguir creciendo hoy y siempre', 'Dios esta en el control desde aca apoyando', 'Sigue confiando en Dios desde aca apoyando', 'Bendiciones inmensas gracias por compartir', 'Amemos a Dios siempre siempre', 'Me suscribo y comparto gran mensaje', 'Sigue asi hoy y siempre', 'Aca apoyando hermano', 'Asi es, gloria a Dios a seguir asi', 'Que hermoso mensaje un fuerte abrazo', 'Que buen material hoy y siempre', 'Tremendo aporte exito', 'El amor de Dios es infinito exito', 'Sigue asi', 'Bendiciones inmensas siempre', 'Exito en todo hoy y siempre', 'La rompiste con esto exito', 'Con Dios todo es posible gran mensaje', 'Me encanto sigue adelante', 'Oro puro este video desde aca apoyando', 'Dios es amor', 'Dios esta en el control no te detengas', 'Se nota la dedicacion desde aca apoyando', 'El tiempo de Dios es perfecto sigue adelante', 'Que el Senor multiplique tus exitos!!', 'Que el Senor multiplique tus exitos siempre', 'Paz y bendiciones gracias por compartir', 'Que hermoso mensaje saludos', 'Con Dios todo es posible me sirve mucho', 'Siempre firme un fuerte abrazo', 'El amor de Dios es infinito gran mensaje', 'Gloria a Dios sigue adelante', 'Me quedo a ver mas gran mensaje', 'Dios es amor desde aca apoyando', 'Me encanto!!', 'Tremendo aporte cuidese mucho', 'Increible trabajo amigo', 'Sigue confiando en Dios saludos', 'Mis respetos un fuerte abrazo', 'Que buen material a seguir asi', 'Que Dios te siga usando!!', 'Todo lo puedo en Cristo sigue adelante', 'A seguir creciendo', 'Se nota la dedicacion totalmente de acuerdo', 'El tiempo de Dios es perfecto a seguir asi', 'Me alegraste el dia!!', 'El amor de Dios es infinito no te detengas', 'Que buen material gracias por compartir', 'Esto merece hacerse viral hermano', 'Amemos a Dios siempre un fuerte abrazo', 'Adelante con tu proyecto gracias por compartir', 'Me gusto mucho gracias por compartir', 'Que Dios te siga usando a seguir asi', 'Dios bendiga tu vida gran mensaje', 'Me gusto mucho saludos', 'Me quedo a ver mas hoy y siempre', 'Que el Senor te guarde exito', 'Asi es, gloria a Dios saludos', 'Fe y esperanza sigue adelante', 'Que buen material un fuerte abrazo', 'Adelante con tu proyecto hoy y siempre', 'Muy interesante me sirve mucho', 'Fuerza y bendiciones hermano', 'Sigue asi un fuerte abrazo', 'Sigue confiando en Dios exito', 'Gloria a Dios me sirve mucho', 'A seguir creciendo un fuerte abrazo', 'Dios te bendiga exito', 'Oro puro este video saludos', 'Amen siempre', 'Saludos cordiales no te detengas', 'Que Dios te siga usando hoy y siempre', 'Dios esta en el control me sirve mucho', 'Fuerza y bendiciones sigue adelante', 'De lo mejor que he visto hoy hoy y siempre', 'Amen me sirve mucho', 'Genial gracias por compartir', 'Que el Senor multiplique tus exitos totalmente de acuerdo', 'Que Dios te siga usando hermano', 'Excelente video gracias por compartir', 'Cristo te ama!!', 'Saludos cordiales sigue adelante', 'Que buen contenido no te detengas', 'Me alegraste el dia exito', 'Se nota la dedicacion gracias por compartir', 'Tremendo aporte gran mensaje', 'Me suscribo y comparto no te detengas', 'Me quedo a ver mas cuidese mucho', 'Increible trabajo hoy y siempre', 'Dios nunca falla gracias por compartir', 'Me quedo a ver mas!!', 'Asi es, gloria a Dios desde aca apoyando', 'Amemos a Dios siempre sigue adelante', 'Excelente video hermano', 'La rompiste con esto amigo', 'Mis respetos gracias por compartir', 'Mis respetos saludos', 'Gloria a Dios amigo', 'Que buen contenido', 'Se nota la dedicacion a seguir asi', 'Me encanto hoy y siempre', 'Adelante con tu proyecto!!', 'Muy interesante sigue adelante', 'Amen gran mensaje', 'Saludos cordiales hermano', 'Siempre firme amigo', 'De lo mejor que he visto hoy saludos', 'Que el Senor multiplique tus exitos hoy y siempre', 'Asi es, gloria a Dios amigo', 'Esto merece hacerse viral!!', 'Asi es, gloria a Dios me sirve mucho', 'Sigue confiando en Dios un fuerte abrazo', 'Dios nunca falla siempre', 'Que el Senor te guarde siempre', 'Muy interesante no te detengas', 'Siempre firme a seguir asi', 'Que buena vibra siempre', 'Excelente video totalmente de acuerdo', 'Dios es amor totalmente de acuerdo', 'A seguir creciendo a seguir asi', 'Saludos cordiales', 'Me alegraste el dia hermano', 'Dios nunca falla exito', 'Que hermoso mensaje', 'Adelante con tu proyecto totalmente de acuerdo', 'Que el Senor te guarde hermano', 'Con Dios todo es posible amigo', 'Fe y esperanza exito', 'Dios nunca falla un fuerte abrazo', 'Me gusto mucho no te detengas', 'Tremendo aporte sigue adelante', 'Dios es amor hermano', 'Me gusto mucho!!', 'Con Dios todo es posible desde aca apoyando', 'Que buena vibra hermano', 'Que el Altisimo te acompane hermano', 'Excelente video!!', 'Amemos a Dios siempre gracias por compartir', 'Mis respetos no te detengas', 'Cristo te ama totalmente de acuerdo', 'Me encanto un fuerte abrazo', 'Me gusto mucho me sirve mucho', 'Gloria a Dios cuidese mucho', 'Gloria a Dios totalmente de acuerdo', 'Me quedo a ver mas sigue adelante', 'De lo mejor que he visto hoy exito', 'Que Dios te siga usando gran mensaje', 'Mis respetos totalmente de acuerdo', 'Adelante con tu proyecto sigue adelante', 'Fuerza y bendiciones gracias por compartir', 'Que buen material hermano', 'Asi es, gloria a Dios un fuerte abrazo', 'Amen hoy y siempre', 'Me suscribo y comparto gracias por compartir', 'Excelente video', 'Que el Senor multiplique tus exitos gran mensaje', 'Que buen material exito', 'Que Dios te siga usando no te detengas', 'Dios bendiga tu vida hermano', 'Me gusto mucho siempre', 'Bendiciones inmensas gran mensaje', 'Dios te bendiga desde aca apoyando', 'Exito en todo desde aca apoyando', 'Que el Altisimo te acompane desde aca apoyando', 'Me gusto mucho gran mensaje', 'Oro puro este video no te detengas', 'Me suscribo y comparto totalmente de acuerdo', 'Buenisimo siempre', 'Dios es amor no te detengas', 'Bendiciones inmensas!!', 'Fuerza y bendiciones un fuerte abrazo', 'Dios nunca falla me sirve mucho', 'Que buen material totalmente de acuerdo', 'Fuerza y bendiciones desde aca apoyando', 'Tremendo aporte', 'Siempre firme totalmente de acuerdo', 'Fe y esperanza siempre', 'Se nota la dedicacion me sirve mucho', 'Un abrazo en Cristo!!', 'Paz y bendiciones!!', 'Que el Senor multiplique tus exitos cuidese mucho', 'Sigue asi sigue adelante', 'El tiempo de Dios es perfecto saludos', 'Que buen contenido exito', 'Fe y esperanza hoy y siempre', 'Oro puro este video cuidese mucho', 'Oro puro este video siempre', 'Mis respetos amigo', 'Dios nunca falla saludos', 'Todo lo puedo en Cristo siempre', 'Que hermoso mensaje exito', 'Tremendo aporte desde aca apoyando', 'Que buen material cuidese mucho', 'Fuerza y bendiciones!!', 'Bendiciones inmensas exito', 'Con Dios todo es posible siempre', 'Esto merece hacerse viral exito', 'Que el Senor te guarde no te detengas', 'Amen sigue adelante', 'De lo mejor que he visto hoy a seguir asi', 'Adelante con tu proyecto me sirve mucho', 'Exito en todo totalmente de acuerdo', 'Sigue confiando en Dios cuidese mucho', 'De lo mejor que he visto hoy!!', 'A seguir creciendo amigo', 'Saludos cordiales amigo', 'Todo lo puedo en Cristo gracias por compartir', 'Muy interesante un fuerte abrazo', 'Que el Senor te guarde me sirve mucho', 'Me alegraste el dia gran mensaje', 'Cristo te ama exito', 'Me quedo a ver mas siempre', 'Fe y esperanza hermano', 'Paz y bendiciones siempre', 'Me suscribo y comparto desde aca apoyando', 'Se nota la dedicacion hoy y siempre', 'Me alegraste el dia hoy y siempre', 'Saludos cordiales gran mensaje', 'Dios bendiga tu vida hoy y siempre', 'Que el Altisimo te acompane hoy y siempre', 'Se nota la dedicacion', 'Un abrazo en Cristo exito', 'Que buen material sigue adelante', 'El amor de Dios es infinito!!', 'Dios bendiga tu vida!!', 'Me encanto gran mensaje', 'Todo lo puedo en Cristo desde aca apoyando', 'Todo lo puedo en Cristo!!', 'De lo mejor que he visto hoy sigue adelante', 'Con Dios todo es posible cuidese mucho', 'Aca apoyando!!', 'A seguir creciendo sigue adelante', 'Tremendo aporte!!', 'Se nota la dedicacion no te detengas', 'Aca apoyando cuidese mucho', 'Cristo te ama me sirve mucho', 'Increible trabajo exito', 'Siempre firme desde aca apoyando', 'Se nota la dedicacion sigue adelante', 'Fe y esperanza a seguir asi', 'Excelente video no te detengas', 'Que el Altisimo te acompane siempre', 'Adelante con tu proyecto saludos', 'Que buen material amigo', 'Me alegraste el dia saludos', 'Que hermoso mensaje gracias por compartir', 'Sigue asi!!', 'Asi es, gloria a Dios no te detengas', 'Increible trabajo saludos', 'Dios te bendiga hoy y siempre', 'Excelente video un fuerte abrazo', 'El amor de Dios es infinito hermano', 'El amor de Dios es infinito', 'Adelante con tu proyecto desde aca apoyando', 'Se nota la dedicacion un fuerte abrazo', 'Paz y bendiciones cuidese mucho', 'Que el Altisimo te acompane gran mensaje', 'Siempre firme me sirve mucho', 'De lo mejor que he visto hoy me sirve mucho', 'De lo mejor que he visto hoy cuidese mucho', 'Que el Senor te guarde gracias por compartir', 'Dios te bendiga totalmente de acuerdo', 'Bendiciones inmensas amigo', 'El tiempo de Dios es perfecto me sirve mucho', 'Me gusto mucho amigo', 'Increible trabajo siempre', 'Mis respetos gran mensaje', 'Asi es, gloria a Dios!!', 'Amemos a Dios siempre', 'Paz y bendiciones sigue adelante', 'Esto merece hacerse viral desde aca apoyando', 'Que buena vibra gran mensaje', 'Genial exito', 'Asi es, gloria a Dios', 'Adelante con tu proyecto gran mensaje', 'Siempre firme no te detengas', 'Con Dios todo es posible hermano', 'Que el Altisimo te acompane un fuerte abrazo', 'Buenisimo no te detengas', 'Increible trabajo desde aca apoyando', 'Increible trabajo totalmente de acuerdo', 'Un abrazo en Cristo gran mensaje', 'Esto merece hacerse viral gran mensaje', 'Fe y esperanza desde aca apoyando', 'Saludos cordiales!!', 'Me alegraste el dia sigue adelante', 'Tremendo aporte hoy y siempre', 'Mis respetos exito', 'Dios es amor saludos', 'Siempre firme saludos', 'Cristo te ama hermano', 'Se nota la dedicacion amigo', 'Me suscribo y comparto hermano', 'Que Dios te siga usando un fuerte abrazo', 'Que buen material siempre', 'Exito en todo siempre', 'Gloria a Dios un fuerte abrazo', 'Genial me sirve mucho', 'Adelante con tu proyecto no te detengas', 'Muy interesante totalmente de acuerdo', 'Se nota la dedicacion hermano', 'Amemos a Dios siempre amigo', 'Que buena vibra', 'Gloria a Dios exito', 'Tremendo aporte un fuerte abrazo', 'De lo mejor que he visto hoy hermano', 'Adelante con tu proyecto amigo', 'Un abrazo en Cristo gracias por compartir', 'Oro puro este video totalmente de acuerdo', 'Me alegraste el dia desde aca apoyando', 'Gloria a Dios desde aca apoyando', 'Sigue asi cuidese mucho', 'Siempre firme', 'Excelente video hoy y siempre', 'Exito en todo gran mensaje', 'Amen', 'Cristo te ama desde aca apoyando', 'Exito en todo hermano', 'Con Dios todo es posible!!', 'Me gusto mucho un fuerte abrazo', 'Buenisimo me sirve mucho', 'Me suscribo y comparto me sirve mucho', 'Aca apoyando totalmente de acuerdo', 'Dios es amor hoy y siempre', 'Dios nunca falla', 'Un abrazo en Cristo', 'Gloria a Dios saludos', 'Dios esta en el control amigo', 'Dios bendiga tu vida sigue adelante', 'Amemos a Dios siempre exito', 'Sigue confiando en Dios me sirve mucho', 'Que buen material no te detengas', 'Increible trabajo un fuerte abrazo', 'Aca apoyando gracias por compartir', 'Dios esta en el control saludos', 'Me encanto hermano', 'Me encanto siempre', 'De lo mejor que he visto hoy gran mensaje', 'Se nota la dedicacion siempre', 'Con Dios todo es posible exito', 'Que buen material gran mensaje', 'Dios nunca falla hoy y siempre', 'De lo mejor que he visto hoy desde aca apoyando', 'El tiempo de Dios es perfecto cuidese mucho', 'Aca apoyando un fuerte abrazo', 'Aca apoyando', 'Tremendo aporte hermano', 'La rompiste con esto a seguir asi', 'La rompiste con esto gran mensaje', 'Oro puro este video gran mensaje', 'Que buen contenido cuidese mucho']
+            
+            msg = random.choice(custom_comments)
+            
+            if msg.strip():
+                self.log(f"[{serial[-4:]}] 💬 Twitch Escribiendo: {msg[:30]}...", "info")
+                safe_msg = msg.strip().replace(" ", "\ ")
+                safe_msg = safe_msg.replace('"', '\"').replace("'", "\'")
+                
+                self.adb.run_command(["shell", "input", "text", f"'{safe_msg}'"], serial)
+                time.sleep(1)
+                self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # ENTER
+                
+        time.sleep(5)
+        send_comment()
+        
+        while not self._is_cancelled(serial, token):
+            wait_time = int(float(chat_interval) * 60)
+            for _ in range(wait_time):
+                if self._is_cancelled(serial, token): return
+                time.sleep(1)
+            send_comment()
+
+    def inject_twitch_batch(self, devices, urls, do_text=False, do_emojis=False, chat_interval=5.0, custom_comments=None, drip_mode="rápido"):
         if not devices or not urls: return
         self.log(f"🟣 Inyectando Twitch en {len(devices)} dispositivo(s)... (Modo: {drip_mode})", "info")
         for i, dev in enumerate(devices):
-            url = __import__('random').choice(urls)
+            import random
+            url = random.choice(urls)
             delay = 0
-            if drip_mode == "rápido" and i > 0: delay = i * __import__('random').randint(3, 8)
-            elif drip_mode == "lento" and i > 0: delay = i * __import__('random').randint(15, 30)
+            if drip_mode == "rápido" and i > 0: delay = i * random.randint(3, 8)
+            elif drip_mode == "lento" and i > 0: delay = i * random.randint(15, 30)
             elif i > 0: delay = i * 1.5
-            __import__('threading').Thread(target=self.inject_twitch, args=(dev["serial"], url, delay), daemon=True).start()
+            import threading
+            threading.Thread(target=self.inject_twitch, args=(dev["serial"], url, do_text, do_emojis, chat_interval, custom_comments, delay), daemon=True).start()
 
 
     def inject_kick(self, serial, url, do_text=False, do_emojis=False, chat_interval=5, custom_comments=None, drip_delay=0):

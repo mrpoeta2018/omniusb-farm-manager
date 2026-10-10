@@ -443,9 +443,9 @@ class OmniUSBCleanApp(ctk.CTk):
         
         row_tw = ctk.CTkFrame(twitch_opt_f, fg_color="transparent")
         row_tw.pack(fill="x")
-        self.chk_twitch_text = ctk.CTkCheckBox(row_tw, text="Comentar (Desactivado)", variable=self.chk_twitch_text_var, width=10, state="disabled", text_color="gray")
+        self.chk_twitch_text = ctk.CTkCheckBox(row_tw, text="Comentar (Texto)", variable=self.chk_twitch_text_var, width=10)
         self.chk_twitch_text.pack(side="left", padx=5)
-        self.chk_twitch_emoji = ctk.CTkCheckBox(row_tw, text="Emojis (Desactivado)", variable=self.chk_twitch_emoji_var, width=10, state="disabled", text_color="gray")
+        self.chk_twitch_emoji = ctk.CTkCheckBox(row_tw, text="Emojis", variable=self.chk_twitch_emoji_var, width=10)
         self.chk_twitch_emoji.pack(side="left", padx=5)
         
         row_tw_int = ctk.CTkFrame(twitch_opt_f, fg_color="transparent")

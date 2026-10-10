@@ -1211,7 +1211,7 @@ class MediaInjector:
             
             if msg.strip():
                 self.log(f"[{serial[-4:]}] 💬 Twitch Escribiendo: {msg[:30]}...", "info")
-                safe_msg = msg.strip().replace(" ", "\ ")
+                safe_msg = msg.strip().replace(" ", r"\ ")
                 safe_msg = safe_msg.replace('"', '\"').replace("'", "\'")
                 
                 self.adb.run_command(["shell", "input", "text", f"'{safe_msg}'"], serial)

@@ -1160,8 +1160,8 @@ class MediaInjector:
         self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", f"'{url.strip()}'", "tv.twitch.android.app"], serial)
         
         # --- LÓGICA DE AUTO-FOLLOW PARA TWITCH ---
-        self.log(f"[{serial[-4:]}] 🟣 Esperando que Twitch cargue para buscar el botón de Seguir...", "info")
-        time.sleep(10)
+        self.log(f"[{serial[-4:]}] 🟣 Esperando 20s a que Twitch cargue para buscar el botón de Seguir...", "info")
+        time.sleep(20)
         
         if self._is_cancelled(serial, token): return
         

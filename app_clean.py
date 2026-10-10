@@ -456,7 +456,7 @@ class OmniUSBCleanApp(ctk.CTk):
         self.twitch_interval.insert(0, "5") # Default 5 mins
         
         ctk.CTkLabel(twitch_opt_f, text="💬 Comentarios Personalizados (uno por línea):", text_color="#E9D5FF").pack(anchor="w", pady=(5,0))
-        self.txt_twitch_comments = ctk.CTkTextbox(twitch_opt_f, height=80, state="disabled", text_color="gray")
+        self.txt_twitch_comments = ctk.CTkTextbox(twitch_opt_f, height=80)
         self.txt_twitch_comments.pack(fill="x", padx=5, pady=2)
         
         row_s3 = ctk.CTkFrame(shorts_opt_f, fg_color="transparent")

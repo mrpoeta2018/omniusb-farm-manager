@@ -429,7 +429,14 @@ class OmniUSBCleanApp(ctk.CTk):
         self.kick_interval.pack(side="left", padx=5)
         self.kick_interval.insert(0, "5") # Default 5 mins
         
-        ctk.CTkLabel(kick_opt_f, text="📝 Comentarios Personalizados (uno por línea):", text_color="#A3E635").pack(anchor="w", pady=(5,0))
+        row_k_mode = ctk.CTkFrame(kick_opt_f, fg_color="transparent")
+        row_k_mode.pack(fill="x", pady=(3, 0))
+        ctk.CTkLabel(row_k_mode, text="📚 Banco de Chat:").pack(side="left")
+        self.kick_comment_mode = ctk.StringVar(value="🎮 Gaming / Apoyo (Default)")
+        ctk.CTkComboBox(row_k_mode, values=["🎮 Gaming / Apoyo (Default)", "🗳️ Votación 6 Segmentos", "🔥 Mixto (Todos los 2000)"], variable=self.kick_comment_mode, width=220).pack(side="left", padx=5)
+
+        ctk.CTkLabel(kick_opt_f, text="🗳️ [A] Trading · [B] Tech · [C] Espacio · [D] Geopolítica · [E] Música · [F] Gaming", font=("Arial", 9, "bold"), text_color="#FCD34D").pack(anchor="w", pady=(4,0))
+        ctk.CTkLabel(kick_opt_f, text="📝 Comentarios Personalizados (uno por línea - opcional):", text_color="#A3E635").pack(anchor="w", pady=(2,0))
         self.txt_kick_comments = ctk.CTkTextbox(kick_opt_f, height=80)
         self.txt_kick_comments.pack(fill="x", padx=5, pady=2)
         
@@ -455,7 +462,14 @@ class OmniUSBCleanApp(ctk.CTk):
         self.twitch_interval.pack(side="left", padx=5)
         self.twitch_interval.insert(0, "5") # Default 5 mins
         
-        ctk.CTkLabel(twitch_opt_f, text="💬 Comentarios Personalizados (uno por línea):", text_color="#E9D5FF").pack(anchor="w", pady=(5,0))
+        row_tw_mode = ctk.CTkFrame(twitch_opt_f, fg_color="transparent")
+        row_tw_mode.pack(fill="x", pady=(3, 0))
+        ctk.CTkLabel(row_tw_mode, text="📚 Banco de Chat:").pack(side="left")
+        self.twitch_comment_mode = ctk.StringVar(value="🎮 Gaming / Apoyo (Default)")
+        ctk.CTkComboBox(row_tw_mode, values=["🎮 Gaming / Apoyo (Default)", "🗳️ Votación 6 Segmentos", "🔥 Mixto (Todos los 2000)"], variable=self.twitch_comment_mode, width=220).pack(side="left", padx=5)
+
+        ctk.CTkLabel(twitch_opt_f, text="🗳️ [A] Trading · [B] Tech · [C] Espacio · [D] Geopolítica · [E] Música · [F] Gaming", font=("Arial", 9, "bold"), text_color="#FCD34D").pack(anchor="w", pady=(4,0))
+        ctk.CTkLabel(twitch_opt_f, text="💬 Comentarios Personalizados (uno por línea - opcional):", text_color="#E9D5FF").pack(anchor="w", pady=(2,0))
         self.txt_twitch_comments = ctk.CTkTextbox(twitch_opt_f, height=80)
         self.txt_twitch_comments.pack(fill="x", padx=5, pady=2)
         
@@ -578,6 +592,8 @@ class OmniUSBCleanApp(ctk.CTk):
             if "awa_m" in d: self.awa_m.delete(0, "end"); self.awa_m.insert(0, str(d["awa_m"]))
             if "kick_m" in d: self.kick_m.delete(0, "end"); self.kick_m.insert(0, str(d["kick_m"]))
             if "kick_urls" in d: self.txt_kick.delete("1.0", "end"); self.txt_kick.insert("1.0", d["kick_urls"])
+            if "kick_comment_mode" in d and hasattr(self, "kick_comment_mode"): self.kick_comment_mode.set(d["kick_comment_mode"])
+            if "twitch_comment_mode" in d and hasattr(self, "twitch_comment_mode"): self.twitch_comment_mode.set(d["twitch_comment_mode"])
             if "yts_m" in d: self.yts_m.delete(0, "end"); self.yts_m.insert(0, str(d["yts_m"]))
             if "mix_m" in d: self.mix_m.delete(0, "end"); self.mix_m.insert(0, str(d["mix_m"]))
             if "singles_m" in d: self.singles_m.delete(0, "end"); self.singles_m.insert(0, str(d["singles_m"]))
@@ -626,6 +642,8 @@ class OmniUSBCleanApp(ctk.CTk):
                 "kick_emoji": self.chk_kick_emoji_var.get(),
                 "kick_interval": self.kick_interval.get(),
                 "kick_comments": self.txt_kick_comments.get("1.0", "end").strip(),
+                "kick_comment_mode": getattr(self, "kick_comment_mode", None) and self.kick_comment_mode.get() or "🎮 Gaming / Apoyo (Default)",
+                "twitch_comment_mode": getattr(self, "twitch_comment_mode", None) and self.twitch_comment_mode.get() or "🎮 Gaming / Apoyo (Default)",
                 "yts_m": self.yts_m.get(),
                 "mix_m": self.mix_m.get(),
                 "singles_m": self.singles_m.get(),
@@ -1118,7 +1136,8 @@ class OmniUSBCleanApp(ctk.CTk):
                     k_interval = 5.0
                 raw_comments = self.txt_kick_comments.get("1.0", "end").strip().split('\n')
                 k_comments = [c.strip() for c in raw_comments if c.strip()]
-                self.injector.inject_kick_batch(devices, urls_finales, do_text=do_txt, do_emojis=do_emo, chat_interval=k_interval, custom_comments=k_comments, drip_mode=drip)
+                k_mode = getattr(self, "kick_comment_mode", None) and self.kick_comment_mode.get() or "gaming"
+                self.injector.inject_kick_batch(devices, urls_finales, do_text=do_txt, do_emojis=do_emo, chat_interval=k_interval, custom_comments=k_comments, drip_mode=drip, comment_mode=k_mode)
             elif mode == "twitch":
                 do_txt = self.chk_twitch_text_var.get()
                 do_emo = self.chk_twitch_emoji_var.get()
@@ -1128,7 +1147,8 @@ class OmniUSBCleanApp(ctk.CTk):
                     tw_interval = 5.0
                 raw_comments = self.txt_twitch_comments.get("1.0", "end").strip().split('\n')
                 tw_comments = [c.strip() for c in raw_comments if c.strip()]
-                self.injector.inject_twitch_batch(devices, urls_finales, do_text=do_txt, do_emojis=do_emo, chat_interval=tw_interval, custom_comments=tw_comments, drip_mode=drip)
+                tw_mode = getattr(self, "twitch_comment_mode", None) and self.twitch_comment_mode.get() or "gaming"
+                self.injector.inject_twitch_batch(devices, urls_finales, do_text=do_txt, do_emojis=do_emo, chat_interval=tw_interval, custom_comments=tw_comments, drip_mode=drip, comment_mode=tw_mode)
                 
         btn_f = ctk.CTkFrame(popup, fg_color="transparent")
         btn_f.pack(fill="x", pady=10)
@@ -1226,7 +1246,8 @@ class OmniUSBCleanApp(ctk.CTk):
                 k_interval = 5.0
             raw_comments = self.txt_kick_comments.get("1.0", "end").strip().split('\n')
             k_comments = [c.strip() for c in raw_comments if c.strip()]
-            if urls: self.injector.inject_kick_batch(self.tunnel.active_devices, urls, do_text=do_txt, do_emojis=do_emo, chat_interval=k_interval, custom_comments=k_comments, drip_mode=drip)
+            k_mode = getattr(self, "kick_comment_mode", None) and self.kick_comment_mode.get() or "gaming"
+            if urls: self.injector.inject_kick_batch(self.tunnel.active_devices, urls, do_text=do_txt, do_emojis=do_emo, chat_interval=k_interval, custom_comments=k_comments, drip_mode=drip, comment_mode=k_mode)
             
         def fn_awa():
             urls = parse_urls(self.txt_awa)
@@ -1242,7 +1263,8 @@ class OmniUSBCleanApp(ctk.CTk):
                 tw_interval = 5.0
             raw_comments = self.txt_twitch_comments.get("1.0", "end").strip().split('\n')
             tw_comments = [c.strip() for c in raw_comments if c.strip()]
-            if urls: self.injector.inject_twitch_batch(self.tunnel.active_devices, urls, do_text=do_txt, do_emojis=do_emo, chat_interval=tw_interval, custom_comments=tw_comments, drip_mode=drip)
+            tw_mode = getattr(self, "twitch_comment_mode", None) and self.twitch_comment_mode.get() or "gaming"
+            if urls: self.injector.inject_twitch_batch(self.tunnel.active_devices, urls, do_text=do_txt, do_emojis=do_emo, chat_interval=tw_interval, custom_comments=tw_comments, drip_mode=drip, comment_mode=tw_mode)
             
         def fn_yts():
             urls = parse_urls(self.txt_yts)

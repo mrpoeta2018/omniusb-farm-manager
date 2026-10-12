@@ -1,7 +1,7 @@
 {
-    "version": "6.0.2",
-    "release_date": "2026-10-06",
+    "version": "6.0.3",
+    "release_date": "2026-10-12",
     "check_url": "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/edicion-oro/version.json",
-    "notes": "OmniUSB Edicion Oro: Motor Kick, Diccionario 981 y auto-arranque inteligente.",
+    "notes": "Edicion Oro 6.0.3: Banco de Chat Inteligente (2000 comentarios: Gaming, Votacion 6 Segmentos, y Mixto).",
     "download_url": "https://github.com/mrpoeta2018/omniusb-farm-manager/archive/refs/heads/edicion-oro.zip"
 }

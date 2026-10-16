@@ -1,12 +1,13 @@
-import subprocess
+﻿import subprocess
 import threading
 import time
 import psutil
 import os
 
 class GnirehtetRunner:
-    def __init__(self, executable_path="gnirehtet.exe"):
+    def __init__(self, executable_path="gnirehtet.exe", port_resolver=None):
         self.executable_path = executable_path
+        self.port_resolver = port_resolver
         self.running_serials = set()
         self.relay_proc = None
         self._stop_relay = False
@@ -21,6 +22,17 @@ class GnirehtetRunner:
         # We start a single relay watchdog
         self.relay_thread = threading.Thread(target=self._relay_watchdog, daemon=True)
         self.relay_thread.start()
+
+    def _env_for(self, serial):
+        """Apunta al puerto ADB (5037 o 5038) que tiene este celular."""
+        if not self.port_resolver or not serial:
+            return self.env
+        try:
+            env = self.env.copy()
+            env["ANDROID_ADB_SERVER_PORT"] = str(int(self.port_resolver(serial)))
+            return env
+        except Exception:
+            return self.env
 
     def _is_relay_running(self):
         # Check system-wide if a relay is already active
@@ -70,7 +82,7 @@ class GnirehtetRunner:
         cmd = [self.executable_path, "start", serial]
         try:
             # We allow 15 seconds for APK installation/start
-            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, startupinfo=startupinfo, env=self.env, timeout=15)
+            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, startupinfo=startupinfo, env=self._env_for(serial), timeout=15)
             self.running_serials.add(serial)
         except Exception as e:
             print(f"[GnirehtetRunner] Failed to start {serial}: {e}")
@@ -85,7 +97,7 @@ class GnirehtetRunner:
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
         try:
-            subprocess.run([self.executable_path, "stop", serial], startupinfo=startupinfo, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5, env=self.env)
+            subprocess.run([self.executable_path, "stop", serial], startupinfo=startupinfo, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=5, env=self._env_for(serial))
         except:
             pass
 

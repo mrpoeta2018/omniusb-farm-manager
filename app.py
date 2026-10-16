@@ -599,7 +599,7 @@ class ProxyFarmApp(ctk.CTk):
         
         base_dir = os.path.dirname(os.path.abspath(__file__))
         self.adb = ADBManager(os.path.join(base_dir, "platform-tools", "adb.exe"))
-        self.runner = GnirehtetRunner(executable_path=os.path.join(base_dir, "gnirehtet.exe"))
+        self.runner = GnirehtetRunner(executable_path=os.path.join(base_dir, "gnirehtet.exe"), port_resolver=self.adb.server_port_for)
         debug_log("Motores ADB/Runner listos")
         self.engine = RotationEngine(self.adb, self.runner, self.on_update_callback if hasattr(self, "on_update_callback") else self.on_engine_update, app_instance=self)
         
@@ -875,7 +875,7 @@ class ProxyFarmApp(ctk.CTk):
                 
                 # 4. Exterminio seguro de ADB para liberar puertos USB
                 lbl.configure(text="Liberando puertos USB (Cerrando ADB)...")
-                try: subprocess.run(["taskkill", "/F", "/IM", "adb.exe"], creationflags=subprocess.CREATE_NO_WINDOW)
+                try: self.adb.kill_own_adb()
                 except: pass
                 try: subprocess.run(["taskkill", "/F", "/IM", "gnirehtet.exe"], creationflags=subprocess.CREATE_NO_WINDOW)
                 except: pass
@@ -2673,10 +2673,8 @@ class ProxyFarmApp(ctk.CTk):
 
     def restart_adb_server(self):
         def _task():
-            self.log_msg("⚠️ Matando motor USB (ADB)... (Desconectará otras apps brevemente)", "warn")
-            import subprocess
-            self.adb.run_command(["kill-server"])
-            subprocess.run(["taskkill", "/F", "/IM", "adb.exe"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            self.log_msg("⚠️ Reiniciando motor USB (ADB) de OmniUSB... (No afecta a Xiaowei)", "warn")
+            self.adb.kill_own_adb()
             time.sleep(3)
             self.log_msg("🚀 Reviviendo motor USB...", "info")
             self.adb.run_command(["start-server"])
@@ -2976,8 +2974,13 @@ class ProxyFarmApp(ctk.CTk):
                 "scrcpy no está instalado.\n\nCierra la app y ejecuta START_APP.bat para que se descargue automáticamente.")
             return
         try:
+            _scrcpy_env = os.environ.copy()
+            try:
+                _scrcpy_env["ANDROID_ADB_SERVER_PORT"] = str(self.adb.server_port_for(serial))
+            except Exception:
+                pass
             subprocess.Popen([scrcpy_exe, "-s", serial, "--window-title", f"📱 {serial}", "--no-audio"],
-                             cwd=os.path.join(base, "scrcpy"))
+                             cwd=os.path.join(base, "scrcpy"), env=_scrcpy_env)
             self.log_msg(f"👁️ Pantalla abierta: {serial}")
         except Exception as e:
             self.log_msg(f"❌ Error al abrir pantalla: {e}", "error")

@@ -45,7 +45,7 @@ class OmniUSBCleanApp(ctk.CTk):
         
         # ── Dependencias Core ──
         self.adb = ADBManager()
-        self.gnirehtet = GnirehtetRunner()
+        self.gnirehtet = GnirehtetRunner(port_resolver=self.adb.server_port_for)
         self.proxy_mgr = NodeProxyManager()
         
         # ── Bloques Nuevos ──

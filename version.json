@@ -1,7 +1,7 @@
 {
-    "version": "6.0.4",
+    "version": "6.0.5",
     "release_date": "2026-10-16",
     "check_url": "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/edicion-oro/version.json",
-    "notes": "Edicion Oro 6.0.4: Soporte Dual-Server ADB para convivencia fluida con Xiaowei (puertos 5037 y 5038).",
+    "notes": "Edicion Oro 6.0.5: Activacion silenciosa de antena Wi-Fi (Fix Sin Conexion en YouTube / YT Music).",
     "download_url": "https://github.com/mrpoeta2018/omniusb-farm-manager/archive/refs/heads/edicion-oro.zip"
 }

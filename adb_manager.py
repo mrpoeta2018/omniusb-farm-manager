@@ -258,8 +258,11 @@ class ADBManager:
         return True
 
     def boost_network_speed(self, device_serial):
+        """Optimiza configuraciones de red y activa antena Wi-Fi para apps exigentes (ej. YouTube) sin pedir confirmación."""
         self.run_command(["shell", "settings", "put", "global", "captive_portal_mode", "0"], device_serial)
         self.run_command(["shell", "settings", "put", "global", "captive_portal_detection_enabled", "0"], device_serial)
+        # Activa la antena Wi-Fi de forma transparente y sin diálogos en pantalla
+        self.run_command(["shell", "cmd", "wifi", "set-wifi-enabled", "enabled"], device_serial)
         return True
 
     def get_real_ip(self, device_serial):

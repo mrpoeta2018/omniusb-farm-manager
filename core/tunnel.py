@@ -102,6 +102,7 @@ class FarmTunnel:
             self.log("🚀 Levantando túneles Gnirehtet en los dispositivos...", "info")
             for dev in self.active_devices:
                 serial = dev['serial']
+                self.adb.boost_network_speed(serial)
                 self.runner.start(serial)
                 time.sleep(2)
                 

@@ -1295,12 +1295,15 @@ class MediaInjector:
 
         if self._is_cancelled(serial, token): return
 
-        # Obtener resolución de pantalla dinámica
-        out = self.adb.run_command(["shell", "wm", "size"], serial)[0]
+        # Obtener resolución de pantalla dinámica universal
         w, h = 480, 854
-        size_match = re.search(r'Physical size:\s*(\d+)x(\d+)', out)
-        if size_match:
-            w, h = map(int, size_match.groups())
+        try:
+            out_sz = self.adb.run_command(["shell", "wm", "size"], serial)[0]
+            sizes = re.findall(r'(\d+)x(\d+)', str(out_sz))
+            if sizes:
+                w, h = int(sizes[-1][0]), int(sizes[-1][1])
+        except Exception:
+            pass
 
         # --- AUTO-FOLLOW Y ENTRADA AL STREAM EN VIVO ---
         dump_name = f"/sdcard/dump_kick_{serial[-4:]}.xml"
@@ -1355,19 +1358,43 @@ class MediaInjector:
 
         self.log(f"[{serial[-4:]}] ✅ KICK REPRODUCIENDO CORRECTAMENTE", "success")
         
-        if not do_text:
+        if not do_text and not do_emojis:
             return
             
         self.log(f"[{serial[-4:]}] 💬 Motor de Chat de Kick Activado (Modo: {comment_mode} | Intervalo: {chat_interval} min)", "info")
         
         chat_x = int(w * 0.40)
         chat_y = int(h * 0.85)
+        emote_y = int(h * 0.761)
+        emote_xs = [int(w * 0.08), int(w * 0.22), int(w * 0.35), int(w * 0.49), int(w * 0.63), int(w * 0.77), int(w * 0.91)]
+        round_counter = [0]
 
         def send_comment():
             if self._is_cancelled(serial, token): return
             
-            # 1. Tap dinámico en la caja de chat (centro exacto para desplegar teclado)
-            self.adb.run_command(["shell", "input", "tap", str(chat_x), str(chat_y)], serial)
+            # Decidir si esta ronda envía texto o emote verde oficial
+            send_type = "text"
+            if do_text and do_emojis:
+                send_type = "text" if (round_counter[0] % 2 == 0) else "emoji"
+            elif do_emojis:
+                send_type = "emoji"
+                
+            round_counter[0] += 1
+
+            if send_type == "emoji":
+                # 🟢 Enviar Emote Verde Oficial de Kick mediante toque directo instantáneo
+                emo_base_x = random.choice(emote_xs)
+                emo_x = emo_base_x + random.randint(-4, 4)
+                emo_y = emote_y + random.randint(-3, 3)
+                self.log(f"[{serial[-4:]}] 🟢 Kick Enviando Emote Verde Oficial (1-Tap)...", "info")
+                self.adb.run_command(["shell", "input", "tap", str(emo_x), str(emo_y)], serial)
+                return
+
+            # 💬 Enviar Comentario de Texto
+            # 1. Tap dinámico en la caja de chat (centro proporcional con micro-variación natural)
+            t_x = chat_x + random.randint(-6, 6)
+            t_y = chat_y + random.randint(-3, 3)
+            self.adb.run_command(["shell", "input", "tap", str(t_x), str(t_y)], serial)
             time.sleep(1.5)
             
             if self._is_cancelled(serial, token): return
@@ -1394,7 +1421,10 @@ class MediaInjector:
         send_comment()
         
         while not self._is_cancelled(serial, token):
-            wait_time = int(float(chat_interval) * 60)
+            try:
+                wait_time = max(5, int(float(chat_interval) * 60))
+            except Exception:
+                wait_time = 300
             for _ in range(wait_time):
                 if self._is_cancelled(serial, token): return
                 time.sleep(1)

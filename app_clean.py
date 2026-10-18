@@ -417,8 +417,10 @@ class OmniUSBCleanApp(ctk.CTk):
         
         row_k = ctk.CTkFrame(kick_opt_f, fg_color="transparent")
         row_k.pack(fill="x")
-        self.chk_kick_text = ctk.CTkCheckBox(row_k, text="Comentar en Chat (Texto)", variable=self.chk_kick_text_var, width=10)
+        self.chk_kick_text = ctk.CTkCheckBox(row_k, text="Comentar (Texto)", variable=self.chk_kick_text_var, width=10)
         self.chk_kick_text.pack(side="left", padx=5)
+        self.chk_kick_emoji = ctk.CTkCheckBox(row_k, text="Emojis Verdes (1-Tap Kick)", variable=self.chk_kick_emoji_var, width=10)
+        self.chk_kick_emoji.pack(side="left", padx=15)
         
         row_k_int = ctk.CTkFrame(kick_opt_f, fg_color="transparent")
         row_k_int.pack(fill="x", pady=(5,0))

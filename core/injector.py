@@ -1255,6 +1255,9 @@ class MediaInjector:
         token = self._new_token(serial)
         self.log(f"[{serial[-4:]}] 🟩 Iniciando Kick -> {url[:50]}...", "info")
 
+        # Asegurar pantalla encendida
+        self.adb.run_command(["shell", "input", "keyevent", "224"], serial)
+
         self.adb.run_command(["shell", "am", "force-stop", "com.kick.mobile"], serial)
         self._cleanup_apps(serial, keep_pkg="com.kick.mobile")
         time.sleep(2)
@@ -1262,10 +1265,68 @@ class MediaInjector:
         if self._is_cancelled(serial, token): return
 
         self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", f"'{url.strip()}'", "com.kick.mobile"], serial)
+        self.log(f"[{serial[-4:]}] 🟩 Esperando 8s a que cargue el canal de Kick...", "info")
+        time.sleep(8)
+
+        if self._is_cancelled(serial, token): return
+
+        # Obtener resolución de pantalla dinámica
+        out = self.adb.run_command(["shell", "wm", "size"], serial)[0]
+        w, h = 480, 854
+        size_match = re.search(r'Physical size:\s*(\d+)x(\d+)', out)
+        if size_match:
+            w, h = map(int, size_match.groups())
+
+        # --- AUTO-FOLLOW Y ENTRADA AL STREAM EN VIVO ---
+        dump_name = f"/sdcard/dump_kick_{serial[-4:]}.xml"
+        self.adb.run_command(["shell", "uiautomator", "dump", dump_name], serial)
+        xml_data = self.adb.run_command(["shell", "cat", dump_name], serial)[0]
+        stream_entered = False
+        if xml_data:
+            import xml.etree.ElementTree as ET
+            try:
+                root = ET.fromstring(xml_data)
+                # 1. Buscar Seguir
+                for node in root.iter("node"):
+                    t = (node.get("text") or "").lower()
+                    d = (node.get("content-desc") or "").lower()
+                    b = node.get("bounds", "")
+                    if "seguir" in t or "follow" in t or "seguir" in d:
+                        m = re.search(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', b)
+                        if m:
+                            x1, y1, x2, y2 = map(int, m.groups())
+                            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+                            self.log(f"[{serial[-4:]}] 💚 ¡Botón Seguir detectado! Dándole a Seguir...", "success")
+                            self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], serial)
+                            time.sleep(2)
+                            break
+                            
+                # 2. Buscar tarjeta de Stream Actual
+                for node in root.iter("node"):
+                    t = (node.get("text") or "").lower()
+                    d = (node.get("content-desc") or "").lower()
+                    b = node.get("bounds", "")
+                    if "stream actual" in t or "stream actual" in d or "streamear" in t:
+                        m = re.search(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', b)
+                        if m:
+                            x1, y1, x2, y2 = map(int, m.groups())
+                            cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+                            self.log(f"[{serial[-4:]}] 🎬 Entrando al stream en vivo...", "info")
+                            self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], serial)
+                            stream_entered = True
+                            break
+            except Exception:
+                pass
+
+        if not stream_entered:
+            # Fallback proporcional para entrar al stream
+            self.adb.run_command(["shell", "input", "tap", str(int(w * 0.40)), str(int(h * 0.75))], serial)
+
+        self.log(f"[{serial[-4:]}] 🟩 Esperando 5s a que el reproductor y chat sincronicen...", "info")
+        time.sleep(5)
         
-        for i in range(15):
-            if self._is_cancelled(serial, token): return
-            time.sleep(1)
+        # Cerrar posibles popups de recompensas tocando el botón Back o centro de video
+        self.adb.run_command(["shell", "input", "tap", str(w // 2), str(int(h * 0.25))], serial)
 
         self.log(f"[{serial[-4:]}] ✅ KICK REPRODUCIENDO CORRECTAMENTE", "success")
         
@@ -1274,71 +1335,42 @@ class MediaInjector:
             
         self.log(f"[{serial[-4:]}] 💬 Motor de Chat de Kick Activado (Modo: {comment_mode} | Intervalo: {chat_interval} min)", "info")
         
-        def click_chat():
-            dump_name = f"/sdcard/dump_kick_{serial[-4:]}.xml"
-            self.adb.run_command(["shell", "uiautomator", "dump", dump_name], serial)
-            out_t = self.adb.run_command(["shell", "cat", dump_name], serial)
-            out = out_t[0] if isinstance(out_t, tuple) else out_t
-            if out:
-                import xml.etree.ElementTree as ET
-                try:
-                    root = ET.fromstring(out)
-                    best_match = None
-                    for node in root.iter("node"):
-                        c_text = (node.get("text") or "").lower()
-                        c_desc = (node.get("content-desc") or "").lower()
-                        c_class = (node.get("class") or "").lower()
-                        bounds = node.get("bounds", "")
-                        
-                        match = re.search(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', bounds)
-                        if match:
-                            x1, y1, x2, y2 = map(int, match.groups())
-                            cy = (y1 + y2) // 2
-                            cx = (x1 + x2) // 2
-                            
-                            is_input_box = "edittext" in c_class or "send a message" in c_text or "enviar mensaje" in c_text or "send a message" in c_desc or "enviar mensaje" in c_desc
-                            is_bottom_chat = ("chat" in c_text or "chat" in c_desc) and cy > 500
-                            
-                            if is_input_box or is_bottom_chat:
-                                best_match = (cx, cy)
-                                if is_input_box:
-                                    break
-                                    
-                    if best_match:
-                        self.adb.run_command(["shell", "input", "tap", str(best_match[0]), str(best_match[1])], serial)
-                        return True
-                except:
-                    pass
-            self.adb.run_command(["shell", "input", "tap", "500", "1500"], serial)
-            return True
+        chat_x = int(w * 0.40)
+        chat_y = int(h * 0.88)
+        send_x = int(w * 0.90)
+        send_y = chat_y
 
         def send_comment():
-            self.adb.run_command(["shell", "input", "tap", "360", "400"], serial)
-            time.sleep(1.0)
+            if self._is_cancelled(serial, token): return
             
-            if click_chat():
-                time.sleep(1.5)
-                msg = ""
-                if do_text and custom_comments:
-                    msg = random.choice(custom_comments)
-                elif do_text:
-                    pool = get_comment_pool(comment_mode)
-                    msg = random.choice(pool)
-                
-                if do_emojis:
-                    emojis = ["🔥", "😎", "🚀", "👏", "🎉", "❤️", "💯"]
-                    msg += " " + random.choice(emojis)
-                    
-                if msg.strip():
-                    self.log(f"[{serial[-4:]}] 💬 Kick Escribiendo: {msg[:35]}...", "info")
-                    safe_msg = msg.strip().replace(" ", "%s")
-                    self.adb.run_command(["shell", "input", "text", f"'{safe_msg}'"], serial)
-                    time.sleep(1)
-                    self.adb.run_command(["shell", "input", "keyevent", "66"], serial)
+            # 1. Tap dinámico en la caja de chat
+            self.adb.run_command(["shell", "input", "tap", str(chat_x), str(chat_y)], serial)
+            time.sleep(1.5)
+            
+            if self._is_cancelled(serial, token): return
+            
+            # 2. Elegir comentario
+            if custom_comments:
+                msg = random.choice(custom_comments)
             else:
-                self.log(f"[{serial[-4:]}] ⚠️ No se vio la caja de chat de Kick.", "warn")
+                pool = get_comment_pool(comment_mode)
+                msg = random.choice(pool)
+            
+            if do_emojis:
+                emojis = ["🔥", "😎", "🚀", "👏", "🎉", "❤️", "💯"]
+                msg += " " + random.choice(emojis)
+                
+            if msg.strip():
+                self.log(f"[{serial[-4:]}] 💬 Kick Escribiendo: {msg[:35]}...", "info")
+                safe_msg = msg.strip().replace(" ", "%s")
+                safe_msg = safe_msg.replace('"', '\"').replace("'", "\'")
+                self.adb.run_command(["shell", "input", "text", f"'{safe_msg}'"], serial)
+                time.sleep(1)
+                # Enviar vía Enter y botón enviar de Kick
+                self.adb.run_command(["shell", "input", "keyevent", "66"], serial)
+                self.adb.run_command(["shell", "input", "tap", str(send_x), str(send_y)], serial)
 
-        time.sleep(5)
+        time.sleep(4)
         send_comment()
         
         while not self._is_cancelled(serial, token):

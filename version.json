@@ -1,7 +1,7 @@
 {
-    "version": "6.0.5",
-    "release_date": "2026-10-16",
+    "version": "6.0.6",
+    "release_date": "2026-10-17",
     "check_url": "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/edicion-oro/version.json",
-    "notes": "Edicion Oro 6.0.5: Activacion silenciosa de antena Wi-Fi (Fix Sin Conexion en YouTube / YT Music).",
+    "notes": "Edicion Oro 6.0.6: Motor de Chat y Auto-Follow de Kick 100% calibrado (Deteccion dinamica y soporte Solo Seguidores).",
     "download_url": "https://github.com/mrpoeta2018/omniusb-farm-manager/archive/refs/heads/edicion-oro.zip"
 }

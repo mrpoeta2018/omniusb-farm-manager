@@ -31,11 +31,36 @@ class MediaInjector:
         self._tokens = {}
         self._lock = threading.Lock()
 
-    # ─────────────────────────────────────────
-    # TOKEN HELPERS
-    # ─────────────────────────────────────────
+    @staticmethod
+    def _clean_text_for_adb(text):
+        """
+        Sanitiza texto para evitar crasheos de Java NullPointerException en 'adb shell input text'.
+        Convierte acentos a caracteres ASCII estándar, limpia comillas y comillas tipográficas,
+        y formatea los espacios como '%s'.
+        """
+        if not text:
+            return ""
+        import unicodedata
+        replacements = {
+            '’': "'", '‘': "'", '`': "'",
+            '“': '"', '”': '"',
+            '¿': '', '¡': '',
+            '—': '-', '–': '-'
+        }
+        for orig, rep in replacements.items():
+            text = text.replace(orig, rep)
+        
+        # Descomponer caracteres con acentos (á -> a, é -> e, ñ -> n)
+        text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('ascii')
+        
+        # Quitar comillas simples y dobles para no romper argumentos de shell
+        text = text.replace('"', '').replace("'", "")
+        
+        # Mantener solo caracteres seguros imprimibles
+        text = re.sub(r'[^a-zA-Z0-9\s.,!?:_+\-*/()]', '', text)
+        
+        return text.strip().replace(" ", "%s")
 
-    
     def _mute_device(self, serial):
         """Silencia el dispositivo cada 9 minutos para no estorbar la pantalla."""
         import time
@@ -1036,7 +1061,7 @@ class MediaInjector:
                                                 f.write("\n".join(comentarios_default))
                                     except: pass
                                     
-                                    adb_text = comment_to_type.replace(" ", "%s").replace('"', '').replace("'", "")
+                                    adb_text = self._clean_text_for_adb(comment_to_type)
                                     self.log(f"[{serial[-4:]}] \u270d\ufe0f Escribiendo comentario: '{comment_to_type}'", "info")
                                     self.adb.run_command(["shell", f"input text {adb_text}"], serial)
                                     time.sleep(random.uniform(3.0, 4.0))
@@ -1226,12 +1251,13 @@ class MediaInjector:
 
             if msg.strip():
                 self.log(f"[{serial[-4:]}] 💬 Twitch Escribiendo: {msg[:35]}...", "info")
-                safe_msg = msg.strip().replace(" ", r"\ ")
-                safe_msg = safe_msg.replace('"', '\"').replace("'", "\'")
-                
-                self.adb.run_command(["shell", "input", "text", f"'{safe_msg}'"], serial)
-                time.sleep(1)
-                self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # ENTER
+                safe_msg = self._clean_text_for_adb(msg)
+                if safe_msg:
+                    self.adb.run_command(["shell", "input", "text", safe_msg], serial)
+                    time.sleep(1)
+                    self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # ENTER
+                    time.sleep(0.5)
+                    self.adb.run_command(["shell", "input", "tap", str(send_x), str(send_y)], serial)
                 
         time.sleep(5)
         send_comment()
@@ -1348,14 +1374,15 @@ class MediaInjector:
         self.log(f"[{serial[-4:]}] 💬 Motor de Chat de Kick Activado (Modo: {comment_mode} | Intervalo: {chat_interval} min)", "info")
         
         chat_x = int(w * 0.40)
-        chat_y = int(h * 0.88)
+        chat_y = int(h * 0.85)
         send_x = int(w * 0.90)
         send_y = chat_y
+        kb_send_y = int(h * 0.95)
 
         def send_comment():
             if self._is_cancelled(serial, token): return
             
-            # 1. Tap dinámico en la caja de chat
+            # 1. Tap dinámico en la caja de chat (centro exacto para desplegar teclado)
             self.adb.run_command(["shell", "input", "tap", str(chat_x), str(chat_y)], serial)
             time.sleep(1.5)
             
@@ -1382,13 +1409,16 @@ class MediaInjector:
                 
             if msg.strip():
                 self.log(f"[{serial[-4:]}] 💬 Kick Escribiendo: {msg[:35]}...", "info")
-                safe_msg = msg.strip().replace(" ", "%s")
-                safe_msg = safe_msg.replace('"', '\"').replace("'", "\'")
-                self.adb.run_command(["shell", "input", "text", f"'{safe_msg}'"], serial)
-                time.sleep(1)
-                # Enviar vía Enter y botón enviar de Kick
-                self.adb.run_command(["shell", "input", "keyevent", "66"], serial)
-                self.adb.run_command(["shell", "input", "tap", str(send_x), str(send_y)], serial)
+                safe_msg = self._clean_text_for_adb(msg)
+                if safe_msg:
+                    self.adb.run_command(["shell", "input", "text", safe_msg], serial)
+                    time.sleep(1)
+                    # Enviar vía Enter del teclado virtual (keyevent 66)
+                    self.adb.run_command(["shell", "input", "keyevent", "66"], serial)
+                    time.sleep(0.5)
+                    # Respaldo: enviar vía botón Enviar del teclado y de la barra
+                    self.adb.run_command(["shell", "input", "tap", str(send_x), str(kb_send_y)], serial)
+                    self.adb.run_command(["shell", "input", "tap", str(send_x), str(send_y)], serial)
 
         time.sleep(4)
         send_comment()
@@ -1599,7 +1629,7 @@ class MediaInjector:
                                                 f.write("\n".join(comentarios_default))
                                     except: pass
                                     
-                                    adb_text = comment_to_type.replace(" ", "%s").replace('"', '').replace("'", "")
+                                    adb_text = self._clean_text_for_adb(comment_to_type)
                                     self.log(f"[{serial[-4:]}] \u270d\ufe0f Escribiendo comentario: '{comment_to_type}'", "info")
                                     self.adb.run_command(["shell", f"input text {adb_text}"], serial)
                                     time.sleep(random.uniform(3.0, 4.0))

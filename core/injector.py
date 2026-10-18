@@ -239,15 +239,15 @@ class MediaInjector:
         return False
 
     def _tap_green_play(self, serial):
-        """Busca el botón Play/Shuffle en Spotify via UIAutomator XML usando ancla matemática (V6 Oro)."""
+        """Busca el botón Play/Shuffle y gestiona Me Gusta en Spotify via UIAutomator XML."""
         import re
         import time
         self.log(f"[{serial[-4:]}] 🔍 Escaneando la estructura visual de Spotify...", "info")
         out_sz, _, _ = self.adb.run_command(["shell", "wm", "size"], serial)
-        w, h = 720, 1280
-        m_sz = re.search(r'(\d+)x(\d+)', str(out_sz))
-        if m_sz:
-            w, h = int(m_sz.group(1)), int(m_sz.group(2))
+        w, h = 480, 854
+        sizes = re.findall(r'(\d+)x(\d+)', str(out_sz))
+        if sizes:
+            w, h = int(sizes[-1][0]), int(sizes[-1][1])
 
         for attempt in range(2):
             try:
@@ -265,11 +265,14 @@ class MediaInjector:
 
                 anchor_y = None
                 btn_agregar_x = None
+                btn_play_coords = None
 
                 for node in root.iter("node"):
                     desc = (node.get("content-desc") or "").lower()
                     text_n = (node.get("text") or "").lower()
                     cls = (node.get("class") or "").lower()
+                    selected = (node.get("selected") or "").lower() == "true"
+                    checked = (node.get("checked") or "").lower() == "true"
                     bounds = node.get("bounds", "")
                     
                     m = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", bounds)
@@ -277,37 +280,66 @@ class MediaInjector:
                     x1, y1, x2, y2 = map(int, m.groups())
                     cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
 
+                    # 1. Saltar anuncios si aparecen
                     if any(k in desc or k in text_n for k in ["saltar", "skip", "omitir"]):
                         self.log(f"[{serial[-4:]}] 🚧 Anuncio detectado 🚧 Saltando...", "warn")
                         self.adb.run_command(["shell", "input", "tap", str(cx), str(cy)], serial)
                         time.sleep(2)
+                        continue
 
-                    if ('agrega' in desc or 'guard' in desc or 'add ' in desc) and 'veces' not in desc and 'min' not in desc:
-                        if 'textview' not in cls:
+                    # Solo elementos en el tercio medio de la pantalla (área de cabecera de playlist)
+                    if not (int(h * 0.25) <= cy <= int(h * 0.75)):
+                        continue
+
+                    # 2. Detectar Botón Play / Aleatorio directo si está identificado en XML
+                    if cx > int(w * 0.60):
+                        if any(p in desc for p in ["reproducir", "play", "aleatorio", "shuffle"]) or any(p in text_n for p in ["reproducir", "play", "aleatorio", "shuffle"]):
+                            btn_play_coords = (cx, cy)
                             anchor_y = cy
-                            # Revisar si ya está guardado (si dice agregado, guardado, o quitar)
-                            ya_guardado = any(w in desc for w in ['agregado', 'guardado', 'quit', 'elimin', 'remove', 'saved', 'added'])
+
+                    # 3. Detectar Botón Me Gusta / Biblioteca (siempre a la izquierda de la fila)
+                    if cx < int(w * 0.60):
+                        if any(w in desc for w in ['veces', 'minuto', 'cancion', 'seguidor', 'oyente', 'plays']):
+                            continue
+
+                        is_like_btn = any(w in desc for w in ['biblioteca', 'library', 'me gusta', 'like', 'favorit', 'agrega', 'añad', 'anad', 'guard', 'add', 'save'])
+                        
+                        if is_like_btn and 'textview' not in cls:
+                            anchor_y = cy
+                            # Detección exhaustiva de si YA está guardado / Me Gusta
+                            ya_guardado = (
+                                selected or
+                                checked or
+                                any(w in desc for w in [
+                                    'añadido', 'anadido', 'agregado', 'guardado', 'added', 'saved',
+                                    'en tu biblioteca', 'en la biblioteca', 'in your library', 'in library',
+                                    'quitar', 'quit', 'elimin', 'remove', 'te gusta', 'liked'
+                                ])
+                            )
                             if ya_guardado:
-                                self.log(f"[{serial[-4:]}] 🤍 Ya estaba guardado en biblioteca (ignorar Like).", "info")
+                                self.log(f"[{serial[-4:]}] 🤍 Playlist YA tiene Me Gusta/Guardada ({desc[:28]}). NO se toca para evitar abrir ventanas.", "info")
                                 btn_agregar_x = None
                             else:
-                                self.log(f"[{serial[-4:]}] 💚 No estaba guardado. Dando Like/Guardar.", "success")
+                                self.log(f"[{serial[-4:]}] 💚 No estaba guardada ({desc[:28]}). Dando Me Gusta...", "success")
                                 btn_agregar_x = cx
-                            break
 
                 if anchor_y:
-                    self.log(f"[{serial[-4:]}] ⚓ Ancla PERFECTA localizada en Y={anchor_y}.", "success")
+                    self.log(f"[{serial[-4:]}] ⚓ Ancla localizada en Y={anchor_y}.", "success")
                     if btn_agregar_x:
                         self.adb.run_command(["shell", "input", "tap", str(btn_agregar_x), str(anchor_y)], serial)
-                        time.sleep(2)
+                        time.sleep(1.5)
                 else:
                     self.log(f"[{serial[-4:]}] ⚠️ Ancla no encontrada. Asumiendo altura estándar.", "warn")
                     anchor_y = int(h * 0.6)
 
-                calc_x = int(w * 0.88) if attempt == 0 else int(w * 0.75)
-                
-                self.log(f"[{serial[-4:]}] 🎯 Disparando dardo al Botón Verde en X:{calc_x}, Y:{anchor_y}...", "info")
-                self.adb.run_command(["shell", "input", "tap", str(calc_x), str(anchor_y)], serial)
+                if btn_play_coords:
+                    calc_x, calc_y = btn_play_coords
+                    self.log(f"[{serial[-4:]}] 🎯 Tocando Botón Play detectado en X:{calc_x}, Y:{calc_y}...", "info")
+                    self.adb.run_command(["shell", "input", "tap", str(calc_x), str(calc_y)], serial)
+                else:
+                    calc_x = int(w * 0.88) if attempt == 0 else int(w * 0.75)
+                    self.log(f"[{serial[-4:]}] 🎯 Disparando dardo al Botón Verde en X:{calc_x}, Y:{anchor_y}...", "info")
+                    self.adb.run_command(["shell", "input", "tap", str(calc_x), str(anchor_y)], serial)
                 return True
 
             except Exception as e:

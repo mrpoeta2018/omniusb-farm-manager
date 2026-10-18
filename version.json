@@ -1,7 +1,7 @@
 {
-    "version": "6.1.1",
+    "version": "6.1.2",
     "release_date": "2026-10-18",
     "check_url": "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/edicion-oro/version.json",
-    "notes": "Edicion Oro 6.1.1: Soporte universal para chat de Kick: comentarios limpios con Enter sin tocar engranaje y envio 1-Tap de Emotes Verdes Oficiales de Kick con coordenadas proporcionales multiresolucion.",
+    "notes": "Edicion Oro 6.1.2: Deteccion inteligente de Me Gusta y Biblioteca en Spotify para evitar ventanas emergentes y toque directo al boton Play.",
     "download_url": "https://github.com/mrpoeta2018/omniusb-farm-manager/archive/refs/heads/edicion-oro.zip"
 }

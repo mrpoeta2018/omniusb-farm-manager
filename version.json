@@ -1,7 +1,7 @@
 {
-    "version": "6.0.9",
+    "version": "6.1.0",
     "release_date": "2026-10-18",
     "check_url": "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/edicion-oro/version.json",
-    "notes": "Edicion Oro 6.0.9: Fix critico motor de chat Kick y Twitch (calibracion milimetrica de coordenadas y sanitizacion anti-crasheo NullPointerException en ADB input text).",
+    "notes": "Edicion Oro 6.1.0: Eliminado toque accidental en el engranaje de Kick y Twitch, y eliminados emotes crudos para envio exclusivo de comentarios limpios.",
     "download_url": "https://github.com/mrpoeta2018/omniusb-farm-manager/archive/refs/heads/edicion-oro.zip"
 }

@@ -413,14 +413,12 @@ class OmniUSBCleanApp(ctk.CTk):
         ctk.CTkLabel(kick_opt_f, text="Opciones de Kick:", font=("Arial", 11, "bold"), text_color="#00FF00").pack(anchor="w")
         
         self.chk_kick_text_var = ctk.BooleanVar(value=True)
-        self.chk_kick_emoji_var = ctk.BooleanVar(value=True)
+        self.chk_kick_emoji_var = ctk.BooleanVar(value=False)
         
         row_k = ctk.CTkFrame(kick_opt_f, fg_color="transparent")
         row_k.pack(fill="x")
-        self.chk_kick_text = ctk.CTkCheckBox(row_k, text="Comentar (Texto)", variable=self.chk_kick_text_var, width=10)
+        self.chk_kick_text = ctk.CTkCheckBox(row_k, text="Comentar en Chat (Texto)", variable=self.chk_kick_text_var, width=10)
         self.chk_kick_text.pack(side="left", padx=5)
-        self.chk_kick_emoji = ctk.CTkCheckBox(row_k, text="Emojis", variable=self.chk_kick_emoji_var, width=10)
-        self.chk_kick_emoji.pack(side="left", padx=5)
         
         row_k_int = ctk.CTkFrame(kick_opt_f, fg_color="transparent")
         row_k_int.pack(fill="x", pady=(5,0))
@@ -450,10 +448,8 @@ class OmniUSBCleanApp(ctk.CTk):
         
         row_tw = ctk.CTkFrame(twitch_opt_f, fg_color="transparent")
         row_tw.pack(fill="x")
-        self.chk_twitch_text = ctk.CTkCheckBox(row_tw, text="Comentar (Texto)", variable=self.chk_twitch_text_var, width=10)
+        self.chk_twitch_text = ctk.CTkCheckBox(row_tw, text="Comentar en Chat (Texto)", variable=self.chk_twitch_text_var, width=10)
         self.chk_twitch_text.pack(side="left", padx=5)
-        self.chk_twitch_emoji = ctk.CTkCheckBox(row_tw, text="Emojis", variable=self.chk_twitch_emoji_var, width=10)
-        self.chk_twitch_emoji.pack(side="left", padx=5)
         
         row_tw_int = ctk.CTkFrame(twitch_opt_f, fg_color="transparent")
         row_tw_int.pack(fill="x", pady=(5,0))

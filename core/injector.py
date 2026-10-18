@@ -1208,7 +1208,7 @@ class MediaInjector:
         self.log(f"[{serial[-4:]}] 🟣 TWITCH REPRODUCIENDO CORRECTAMENTE", "success")
 
         # --- LÓGICA DE CHAT ---
-        if not do_text and not do_emojis:
+        if not do_text:
             return
             
         self.log(f"[{serial[-4:]}] 💬 Motor de Chat de Twitch Activado (Modo: {comment_mode} | Intervalo: {chat_interval} min)", "info")
@@ -1230,34 +1230,21 @@ class MediaInjector:
             
             if self._is_cancelled(serial, token): return
             
-            # 1. Seleccionar texto si está activado
+            # 1. Seleccionar texto limpio
             msg = ""
-            if do_text and custom_comments:
+            if custom_comments:
                 msg = random.choice(custom_comments)
-            elif do_text:
+            else:
                 pool = get_comment_pool(comment_mode)
                 msg = random.choice(pool)
-            
-            # 2. Agregar o enviar SOLO emotes si está activado
-            if do_emojis:
-                stream_emotes = ["KEKW", "W", "POG", "GG", "LUL", "10/10", "Clap", "Fire", "W stream", "OMEGALUL", "EZ", "Kappa", "F", "LETS GOOO"]
-                if msg.strip():
-                    msg = f"{msg.strip()} {random.choice(stream_emotes)}"
-                else:
-                    # Modo SOLO EMOJIS: 1 a 3 emotes estilo chat real
-                    emo = random.choice(stream_emotes)
-                    count = random.choices([1, 2, 3], weights=[50, 35, 15])[0]
-                    msg = " ".join([emo] * count)
 
             if msg.strip():
                 self.log(f"[{serial[-4:]}] 💬 Twitch Escribiendo: {msg[:35]}...", "info")
                 safe_msg = self._clean_text_for_adb(msg)
                 if safe_msg:
                     self.adb.run_command(["shell", "input", "text", safe_msg], serial)
-                    time.sleep(1)
+                    time.sleep(1.2)
                     self.adb.run_command(["shell", "input", "keyevent", "66"], serial) # ENTER
-                    time.sleep(0.5)
-                    self.adb.run_command(["shell", "input", "tap", str(send_x), str(send_y)], serial)
                 
         time.sleep(5)
         send_comment()
@@ -1368,16 +1355,13 @@ class MediaInjector:
 
         self.log(f"[{serial[-4:]}] ✅ KICK REPRODUCIENDO CORRECTAMENTE", "success")
         
-        if not do_text and not do_emojis:
+        if not do_text:
             return
             
         self.log(f"[{serial[-4:]}] 💬 Motor de Chat de Kick Activado (Modo: {comment_mode} | Intervalo: {chat_interval} min)", "info")
         
         chat_x = int(w * 0.40)
         chat_y = int(h * 0.85)
-        send_x = int(w * 0.90)
-        send_y = chat_y
-        kb_send_y = int(h * 0.95)
 
         def send_comment():
             if self._is_cancelled(serial, token): return
@@ -1388,37 +1372,23 @@ class MediaInjector:
             
             if self._is_cancelled(serial, token): return
             
-            # 2. Elegir comentario de texto si está activo
+            # 2. Elegir comentario de texto limpio (sin emotes crudos)
             msg = ""
-            if do_text and custom_comments:
+            if custom_comments:
                 msg = random.choice(custom_comments)
-            elif do_text:
+            else:
                 pool = get_comment_pool(comment_mode)
                 msg = random.choice(pool)
-            
-            # 3. Agregar o enviar SOLO emotes si está activo
-            if do_emojis:
-                stream_emotes = ["KEKW", "W", "POG", "GG", "LUL", "10/10", "Clap", "Fire", "W stream", "OMEGALUL", "EZ", "Kappa", "F", "LETS GOOO"]
-                if msg.strip():
-                    msg = f"{msg.strip()} {random.choice(stream_emotes)}"
-                else:
-                    # Modo SOLO EMOJIS: 1 a 3 emotes estilo chat real
-                    emo = random.choice(stream_emotes)
-                    count = random.choices([1, 2, 3], weights=[50, 35, 15])[0]
-                    msg = " ".join([emo] * count)
                 
             if msg.strip():
                 self.log(f"[{serial[-4:]}] 💬 Kick Escribiendo: {msg[:35]}...", "info")
                 safe_msg = self._clean_text_for_adb(msg)
                 if safe_msg:
                     self.adb.run_command(["shell", "input", "text", safe_msg], serial)
-                    time.sleep(1)
-                    # Enviar vía Enter del teclado virtual (keyevent 66)
+                    time.sleep(1.2)
+                    # Enviar vía Enter del teclado virtual (keyevent 66).
+                    # Esto envía el mensaje y cierra el teclado limpiamente SIN tocar el engranaje de abajo.
                     self.adb.run_command(["shell", "input", "keyevent", "66"], serial)
-                    time.sleep(0.5)
-                    # Respaldo: enviar vía botón Enviar del teclado y de la barra
-                    self.adb.run_command(["shell", "input", "tap", str(send_x), str(kb_send_y)], serial)
-                    self.adb.run_command(["shell", "input", "tap", str(send_x), str(send_y)], serial)
 
         time.sleep(4)
         send_comment()

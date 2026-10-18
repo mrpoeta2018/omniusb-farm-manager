@@ -1212,6 +1212,10 @@ class MediaInjector:
                 pool = get_comment_pool(comment_mode)
                 msg = random.choice(pool)
             
+            if do_emojis:
+                stream_emotes = ["KEKW", "W", "POG", "GG", "LUL", "10/10", "Clap", "Fire", "W stream"]
+                msg = f"{msg.strip()} {random.choice(stream_emotes)}" if msg.strip() else random.choice(stream_emotes)
+
             if msg.strip():
                 self.log(f"[{serial[-4:]}] 💬 Twitch Escribiendo: {msg[:35]}...", "info")
                 safe_msg = msg.strip().replace(" ", r"\ ")
@@ -1357,8 +1361,8 @@ class MediaInjector:
                 msg = random.choice(pool)
             
             if do_emojis:
-                emojis = ["🔥", "😎", "🚀", "👏", "🎉", "❤️", "💯"]
-                msg += " " + random.choice(emojis)
+                stream_emotes = ["KEKW", "W", "POG", "GG", "LUL", "10/10", "Clap", "Fire", "W stream"]
+                msg = f"{msg.strip()} {random.choice(stream_emotes)}" if msg.strip() else random.choice(stream_emotes)
                 
             if msg.strip():
                 self.log(f"[{serial[-4:]}] 💬 Kick Escribiendo: {msg[:35]}...", "info")

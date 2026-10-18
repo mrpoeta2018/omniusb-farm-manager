@@ -1,7 +1,7 @@
 {
-    "version": "6.0.6",
+    "version": "6.0.7",
     "release_date": "2026-10-17",
     "check_url": "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/edicion-oro/version.json",
-    "notes": "Edicion Oro 6.0.6: Motor de Chat y Auto-Follow de Kick 100% calibrado (Deteccion dinamica y soporte Solo Seguidores).",
+    "notes": "Edicion Oro 6.0.7: Soporte de Emotes de Streaming para Kick y Twitch (sin crasheos de ADB, 100% nativo).",
     "download_url": "https://github.com/mrpoeta2018/omniusb-farm-manager/archive/refs/heads/edicion-oro.zip"
 }

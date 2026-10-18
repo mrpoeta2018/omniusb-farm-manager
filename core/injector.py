@@ -1205,16 +1205,24 @@ class MediaInjector:
             
             if self._is_cancelled(serial, token): return
             
-            # Seleccionar comentario (personalizado o desde el banco según el modo)
-            if custom_comments:
+            # 1. Seleccionar texto si está activado
+            msg = ""
+            if do_text and custom_comments:
                 msg = random.choice(custom_comments)
-            else:
+            elif do_text:
                 pool = get_comment_pool(comment_mode)
                 msg = random.choice(pool)
             
+            # 2. Agregar o enviar SOLO emotes si está activado
             if do_emojis:
-                stream_emotes = ["KEKW", "W", "POG", "GG", "LUL", "10/10", "Clap", "Fire", "W stream"]
-                msg = f"{msg.strip()} {random.choice(stream_emotes)}" if msg.strip() else random.choice(stream_emotes)
+                stream_emotes = ["KEKW", "W", "POG", "GG", "LUL", "10/10", "Clap", "Fire", "W stream", "OMEGALUL", "EZ", "Kappa", "F", "LETS GOOO"]
+                if msg.strip():
+                    msg = f"{msg.strip()} {random.choice(stream_emotes)}"
+                else:
+                    # Modo SOLO EMOJIS: 1 a 3 emotes estilo chat real
+                    emo = random.choice(stream_emotes)
+                    count = random.choices([1, 2, 3], weights=[50, 35, 15])[0]
+                    msg = " ".join([emo] * count)
 
             if msg.strip():
                 self.log(f"[{serial[-4:]}] 💬 Twitch Escribiendo: {msg[:35]}...", "info")
@@ -1353,16 +1361,24 @@ class MediaInjector:
             
             if self._is_cancelled(serial, token): return
             
-            # 2. Elegir comentario
-            if custom_comments:
+            # 2. Elegir comentario de texto si está activo
+            msg = ""
+            if do_text and custom_comments:
                 msg = random.choice(custom_comments)
-            else:
+            elif do_text:
                 pool = get_comment_pool(comment_mode)
                 msg = random.choice(pool)
             
+            # 3. Agregar o enviar SOLO emotes si está activo
             if do_emojis:
-                stream_emotes = ["KEKW", "W", "POG", "GG", "LUL", "10/10", "Clap", "Fire", "W stream"]
-                msg = f"{msg.strip()} {random.choice(stream_emotes)}" if msg.strip() else random.choice(stream_emotes)
+                stream_emotes = ["KEKW", "W", "POG", "GG", "LUL", "10/10", "Clap", "Fire", "W stream", "OMEGALUL", "EZ", "Kappa", "F", "LETS GOOO"]
+                if msg.strip():
+                    msg = f"{msg.strip()} {random.choice(stream_emotes)}"
+                else:
+                    # Modo SOLO EMOJIS: 1 a 3 emotes estilo chat real
+                    emo = random.choice(stream_emotes)
+                    count = random.choices([1, 2, 3], weights=[50, 35, 15])[0]
+                    msg = " ".join([emo] * count)
                 
             if msg.strip():
                 self.log(f"[{serial[-4:]}] 💬 Kick Escribiendo: {msg[:35]}...", "info")

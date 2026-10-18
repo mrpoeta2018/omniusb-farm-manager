@@ -1,7 +1,7 @@
 {
-    "version": "6.0.7",
+    "version": "6.0.8",
     "release_date": "2026-10-17",
     "check_url": "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/edicion-oro/version.json",
-    "notes": "Edicion Oro 6.0.7: Soporte de Emotes de Streaming para Kick y Twitch (sin crasheos de ADB, 100% nativo).",
+    "notes": "Edicion Oro 6.0.8: Soporte nativo para modo SOLO EMOJIS (1 a 3 emotes estilo chat real en Kick y Twitch).",
     "download_url": "https://github.com/mrpoeta2018/omniusb-farm-manager/archive/refs/heads/edicion-oro.zip"
 }

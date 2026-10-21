@@ -1753,10 +1753,6 @@ class OmniUSBCleanApp(ctk.CTk):
 
         updater.check_for_updates_async(_on_result)
 
-if __name__ == "__main__":
-    app = OmniUSBCleanApp()
-    app.mainloop()
-
     def action_starvios_login(self):
         if not self.tunnel.active_devices:
             self.log_msg("⚠️ Conecta o abre el túnel en dispositivos antes del login.", "warn")
@@ -1766,3 +1762,7 @@ if __name__ == "__main__":
         self.log_msg(f"🔑 Iniciando Login/Registro Starvios en {len(self.tunnel.active_devices)} dispositivo(s)...", "info")
         import threading
         threading.Thread(target=self.injector.login_starvios_batch, args=(self.tunnel.active_devices, url, 60), daemon=True).start()
+
+if __name__ == "__main__":
+    app = OmniUSBCleanApp()
+    app.mainloop()

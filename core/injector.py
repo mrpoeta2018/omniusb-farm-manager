@@ -1196,6 +1196,272 @@ class MediaInjector:
             import threading
             threading.Thread(target=self.inject_ytshorts, args=(serial, url, t_min, t_max, do_like, do_save, do_comment, do_share, delay), daemon=True).start()
 
+    # ─────────────────────────────────────────
+    # INYECCIÓN STARVIOS (LIVE STREAMS WEB)
+    # ─────────────────────────────────────────
+
+    def inject_starvios(self, serial, url, drip_delay=0, keepalive_mins=60):
+        if drip_delay > 0:
+            time.sleep(drip_delay)
+
+        token = self._new_token(serial)
+        self.log(f"[{serial[-4:]}] 🌟 Iniciando Starvios → {url[:50]}...", "info")
+
+        # Asegurar pantalla encendida
+        self.adb.run_command(["shell", "input", "keyevent", "224"], serial)
+        self.adb.run_command(["shell", "input", "keyevent", "82"], serial)
+        time.sleep(1)
+
+        if self._is_cancelled(serial, token): return
+
+        # Abrir Chrome con la transmisión de Starvios
+        safe_url = f"'{url.strip()}'"
+        self.adb.run_command(
+            ["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", safe_url, "-n", "com.android.chrome/com.google.android.apps.chrome.Main"],
+            serial
+        )
+
+        self.log(f"[{serial[-4:]}] ⏳ Esperando 8s a que cargue Starvios...", "info")
+        time.sleep(8)
+
+        if self._is_cancelled(serial, token): return
+
+        # Ciclo de retención / Keep-Alive (evita que la pantalla se apague)
+        wait_seconds = int(keepalive_mins * 60)
+        self.log(f"[{serial[-4:]}] 🛡️ Starvios en vivo: retención activa ({keepalive_mins} mins)", "info")
+        for i in range(wait_seconds):
+            if self._is_cancelled(serial, token): return
+            time.sleep(1)
+            # Toque cada 60s en zona neutra superior (barra) para mantener despierto
+            if i > 0 and i % 60 == 0:
+                self.adb.run_command(["shell", "input", "tap", "240", "100"], serial)
+
+    def inject_starvios_batch(self, devices, urls, drip_mode="rápido", keepalive_mins=60):
+        if not devices or not urls: return
+        self.log(f"🌟 Inyectando Starvios en {len(devices)} dispositivo(s)...", "info")
+        for i, dev in enumerate(devices):
+            import random
+            url = random.choice(urls)
+            delay = 0
+            if drip_mode == "rápido" and i > 0: delay = i * random.randint(3, 8)
+            elif drip_mode == "lento" and i > 0: delay = i * random.randint(15, 30)
+            elif i > 0: delay = i * 1.5
+            import threading
+            threading.Thread(target=self.inject_starvios, args=(dev["serial"], url, delay, keepalive_mins), daemon=True).start()
+
+
+
+
+
+    def login_and_inject_starvios(self, serial, url=None, keepalive_mins=60):
+        token = self._new_token(serial)
+        self.log(f"[{serial[-4:]}] 🔑 Iniciando Verificación / Login Starvios...", "info")
+
+        # 1. Despertar pantalla
+        self.adb.run_command(["shell", "input", "keyevent", "224"], serial)
+        self.adb.run_command(["shell", "input", "keyevent", "82"], serial)
+        import time, os, re
+        time.sleep(1)
+
+        if self._is_cancelled(serial, token): return
+
+        # Helper UI dump
+        def _dump_root():
+            self.adb.run_command(["shell", "uiautomator", "dump", "/sdcard/u_star.xml"], serial)
+            import tempfile, xml.etree.ElementTree as ET
+            tpath = os.path.join(tempfile.gettempdir(), f"u_star_{serial}.xml")
+            self.adb.run_command(["pull", "/sdcard/u_star.xml", tpath], serial)
+            if os.path.exists(tpath):
+                try:
+                    tree = ET.parse(tpath)
+                    try:
+                        os.remove(tpath)
+                    except:
+                        pass
+                    return tree.getroot()
+                except:
+                    pass
+            return None
+
+        def _find_nodes(root, pattern, attr="text"):
+            if root is None: return []
+            res = []
+            cp = re.compile(pattern, re.IGNORECASE)
+            for n in root.iter():
+                val = n.attrib.get(attr, "")
+                if val and cp.search(val):
+                    res.append(n)
+            return res
+
+        def _node_center(node):
+            b = node.attrib.get("bounds", "")
+            m = re.findall(r"\[(\d+),(\d+)\]", b)
+            if len(m) == 2:
+                x1, y1 = int(m[0][0]), int(m[0][1])
+                x2, y2 = int(m[1][0]), int(m[1][1])
+                if not (x1 == 0 and x2 == 0 and y1 == 0 and y2 == 0):
+                    return ((x1 + x2) // 2, (y1 + y2) // 2)
+            return None
+
+        def _tap_c(center):
+            if center:
+                self.adb.run_command(["shell", "input", "tap", str(center[0]), str(center[1])], serial)
+                return True
+            return False
+
+        def _is_logged():
+            r = _dump_root()
+            if r is None: return False
+            logins = _find_nodes(r, r"^(Login|Log in|Acceder)$")
+            if logins: return False
+            profiles = _find_nodes(r, r"Profile|Perfil") or _find_nodes(r, r"Profile|Perfil", attr="content-desc")
+            return bool(profiles)
+
+        # 2. Verificar si ya está logueado
+        self.log(f"[{serial[-4:]}] Comprobando sesión previa en Starvios...", "info")
+        self.adb.run_command(
+            ["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "https://starvios.com/#", "-n", "com.android.chrome/com.google.android.apps.chrome.Main"],
+            serial
+        )
+        time.sleep(6)
+
+        if self._is_cancelled(serial, token): return
+
+        if _is_logged():
+            self.log(f"[{serial[-4:]}] ✅ Ya tiene sesión iniciada en Starvios.", "info")
+        else:
+            self.log(f"[{serial[-4:]}] Sin sesión activa. Procediendo con Login Google...", "info")
+            self.adb.run_command(
+                ["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", "https://starvios.com/auth", "-n", "com.android.chrome/com.google.android.apps.chrome.Main"],
+                serial
+            )
+            time.sleep(5)
+
+            if self._is_cancelled(serial, token): return
+
+            # Tap Continue with Google
+            r = _dump_root()
+            g_btns = _find_nodes(r, r"Continue with Google") or _find_nodes(r, r"Continue with Google", attr="content-desc")
+            if g_btns:
+                _tap_c(_node_center(g_btns[0]))
+            else:
+                self.adb.run_command(["shell", "input", "tap", "240", "380"], serial)
+
+            time.sleep(5)
+            if self._is_cancelled(serial, token): return
+
+            # Buscar cuentas Gmail
+            r = _dump_root()
+            gmail_accounts = []
+            if r is not None:
+                for node in r.iter():
+                    txt = node.attrib.get("text", "")
+                    if "@gmail.com" in txt.lower():
+                        c = _node_center(node)
+                        if c:
+                            gmail_accounts.append((txt, c))
+
+            if not gmail_accounts:
+                gmail_accounts = [("cuenta_default", (240, 510))]
+
+            self.log(f"[{serial[-4:]}] {len(gmail_accounts)} cuenta(s) Gmail detectadas.", "info")
+
+            for acc_name, acc_pos in gmail_accounts:
+                if self._is_cancelled(serial, token): return
+                self.log(f"[{serial[-4:]}] Intentando login con {acc_name}...", "info")
+                _tap_c(acc_pos)
+                time.sleep(5)
+
+                # Consentimiento Supabase si aparece
+                r_c = _dump_root()
+                if r_c is not None:
+                    down_arrows = _find_nodes(r_c, r"Desplazar hacia abajo") or _find_nodes(r_c, r"Desplazar hacia abajo", attr="content-desc")
+                    if down_arrows:
+                        _tap_c(_node_center(down_arrows[0]))
+                        time.sleep(2)
+                        r_c = _dump_root()
+
+                    cont_btns = _find_nodes(r_c, r"^Continuar$")
+                    if cont_btns:
+                        _tap_c(_node_center(cont_btns[0]))
+                        time.sleep(5)
+
+                # Fecha de nacimiento si aparece
+                r_d = _dump_root()
+                if r_d is not None:
+                    missing = _find_nodes(r_d, r"missing some information|fecha de nacimiento")
+                    if missing:
+                        self.log(f"[{serial[-4:]}] Completando fecha de nacimiento...", "info")
+                        dp = [n for n in r_d.iter() if "DatePicker" in n.attrib.get("class", "") or "dd/mm/aaaa" in n.attrib.get("text", "")]
+                        if dp:
+                            _tap_c(_node_center(dp[0]))
+                        else:
+                            self.adb.run_command(["shell", "input", "tap", "240", "595"], serial)
+                        time.sleep(2)
+
+                        r_pencil = _dump_root()
+                        pencils = _find_nodes(r_pencil, r"mtrl_picker_header_toggle", attr="resource-id") or _find_nodes(r_pencil, r"modo de entrada de texto", attr="content-desc")
+                        if pencils:
+                            _tap_c(_node_center(pencils[0]))
+                        else:
+                            self.adb.run_command(["shell", "input", "tap", "400", "250"], serial)
+                        time.sleep(2)
+
+                        # Limpiar y escribir 01012000
+                        self.adb.run_command(["shell", "for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do input keyevent 67; done"], serial)
+                        time.sleep(1)
+                        self.adb.run_command(["shell", "input", "text", "01012000"], serial)
+                        time.sleep(1)
+                        self.adb.run_command(["shell", "input", "keyevent", "4"], serial)
+                        time.sleep(1)
+
+                        r_ok = _dump_root()
+                        oks = _find_nodes(r_ok, r"confirm_button", attr="resource-id") or _find_nodes(r_ok, r"Aceptar")
+                        if oks:
+                            _tap_c(_node_center(oks[0]))
+                        else:
+                            self.adb.run_command(["shell", "input", "tap", "385", "600"], serial)
+                        time.sleep(2)
+
+                        r_cont2 = _dump_root()
+                        cont_final = _find_nodes(r_cont2, r"^Continuar$")
+                        if cont_final:
+                            _tap_c(_node_center(cont_final[0]))
+                        else:
+                            self.adb.run_command(["shell", "input", "tap", "240", "660"], serial)
+                        time.sleep(5)
+
+                if _is_logged():
+                    self.log(f"[{serial[-4:]}] 🎉 Login/Registro exitoso con {acc_name}!", "success")
+                    break
+                else:
+                    self.log(f"[{serial[-4:]}] No completó con {acc_name}, probando siguiente...", "warning")
+
+        # 3. Inyectar transmisión si se proporcionó URL
+        if url and url.strip():
+            self.log(f"[{serial[-4:]}] 📺 Inyectando stream en vivo: {url[:50]}...", "info")
+            safe_url = f"'{url.strip()}'"
+            self.adb.run_command(
+                ["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", safe_url, "-n", "com.android.chrome/com.google.android.apps.chrome.Main"],
+                serial
+            )
+            time.sleep(6)
+
+            # Keep-Alive
+            wait_seconds = int(keepalive_mins * 60)
+            self.log(f"[{serial[-4:]}] ⏳ Starvios en vivo: retención activa ({keepalive_mins} mins)", "info")
+            for i in range(wait_seconds):
+                if self._is_cancelled(serial, token): return
+                time.sleep(1)
+                if i > 0 and i % 60 == 0:
+                    self.adb.run_command(["shell", "input", "tap", "240", "100"], serial)
+
+    def login_starvios_batch(self, devices, url=None, keepalive_mins=60):
+        if not devices: return
+        self.log(f"🔑 Iniciando Login/Registro Starvios en {len(devices)} dispositivo(s)...", "info")
+        for dev in devices:
+            import threading
+            threading.Thread(target=self.login_and_inject_starvios, args=(dev["serial"], url, keepalive_mins), daemon=True).start()
 
     def inject_twitch(self, serial, url, do_text=False, do_emojis=False, chat_interval=5.0, custom_comments=None, drip_delay=0, comment_mode="gaming"):
         import time
@@ -1763,5 +2029,3 @@ class MediaInjector:
                 delay = i * 1.5
             import threading
             threading.Thread(target=self.inject_ytshorts, args=(serial, url, t_min, t_max, do_like, do_save, do_comment, do_share, delay), daemon=True).start()
-
-

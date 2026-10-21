@@ -1,7 +1,7 @@
 {
-    "version": "6.1.2",
-    "release_date": "2026-10-18",
+    "version": "6.1.4",
+    "release_date": "2026-10-20",
     "check_url": "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/edicion-oro/version.json",
-    "notes": "Edicion Oro 6.1.2: Deteccion inteligente de Me Gusta y Biblioteca en Spotify para evitar ventanas emergentes y toque directo al boton Play.",
+    "notes": "Edicion Oro 6.1.4: Motor inteligente de Login y Registro automatico para Starvios con Google OAuth (seleccion automatica de Gmail, aprobacion de permisos, bypass de fecha de nacimiento 18+ e inyeccion directa del stream con chat activo).",
     "download_url": "https://github.com/mrpoeta2018/omniusb-farm-manager/archive/refs/heads/edicion-oro.zip"
 }

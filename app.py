@@ -2749,8 +2749,12 @@ class ProxyFarmApp(ctk.CTk):
                 if hasattr(self, 'kick_textbox') and "kick_playlists" in data:
                     self.kick_textbox.delete("1.0", "end")
                     self.kick_textbox.insert("1.0", data["kick_playlists"].strip() + "\n")
+                if hasattr(self, 'starvios_textbox') and "starvios_playlists" in data:
+                    self.starvios_textbox.delete("1.0", "end")
+                    self.starvios_textbox.insert("1.0", data["starvios_playlists"].strip() + "\n")
                 if hasattr(self, 'ig_auto') and "ig_auto" in data: self.ig_auto.set(data["ig_auto"])
                 if hasattr(self, 'kick_auto') and "kick_auto" in data: self.kick_auto.set(data["kick_auto"])
+                if hasattr(self, 'starvios_auto') and "starvios_auto" in data: self.starvios_auto.set(data["starvios_auto"])
                 if hasattr(self, 'use_spotify') and "use_spotify" in data: self.use_spotify.set(data["use_spotify"])
                 if hasattr(self, 'use_ytmusic') and "use_ytmusic" in data: self.use_ytmusic.set(data["use_ytmusic"])
                 if hasattr(self, 'use_ytvideo') and "use_ytvideo" in data: self.use_ytvideo.set(data["use_ytvideo"])
@@ -2814,8 +2818,10 @@ class ProxyFarmApp(ctk.CTk):
                 "apl_playlists": self.apl_textbox.get("1.0", "end").strip() if hasattr(self, 'apl_textbox') else "",
                 "ig_playlists": self.ig_textbox.get("1.0", "end").strip() if hasattr(self, 'ig_textbox') else "",
                 "kick_playlists": self.kick_textbox.get("1.0", "end").strip() if hasattr(self, 'kick_textbox') else "",
+                "starvios_playlists": self.starvios_textbox.get("1.0", "end").strip() if hasattr(self, 'starvios_textbox') else "",
                 "ig_auto": self.ig_auto.get() if hasattr(self, 'ig_auto') else True,
                 "kick_auto": self.kick_auto.get() if hasattr(self, 'kick_auto') else True,
+                "starvios_auto": self.starvios_auto.get() if hasattr(self, 'starvios_auto') else True,
                 "youtube_drip": self.youtube_drip_var.get(),
                 "watchdog_enabled": self.watchdog_enabled.get(),
                 "ghost_enabled": self.ghost_enabled.get(),
@@ -3725,6 +3731,21 @@ class ProxyFarmApp(ctk.CTk):
         btn_kick_login = ctk.CTkButton(kick_frame, text="🔑 Pre-Check (Login Kick)", fg_color="#2563EB", hover_color="#1D4ED8", command=self.start_kick_google_login)
         btn_kick_login.pack(side="left", padx=10, pady=10)
         
+        # STARVIOS
+        starvios_frame = ctk.CTkFrame(main_frame, fg_color="#831843", corner_radius=8)
+        starvios_frame.pack(fill="x", pady=10)
+        self.starvios_auto = ctk.BooleanVar(value=True)
+        ctk.CTkCheckBox(starvios_frame, text="🌟 Starvios (Live Web Streams) | Auto-KeepAlive:", font=("Arial", 12, "bold"), text_color="white", variable=self.starvios_auto).pack(anchor="w", padx=10, pady=5)
+        self.starvios_textbox = ctk.CTkTextbox(starvios_frame, height=45)
+        self.starvios_textbox.insert("1.0", "https://starvios.com/live/aleeextorreees\n")
+        self.starvios_textbox.pack(padx=10, pady=(0,5), fill="x")
+        btn_starvios = ctk.CTkButton(starvios_frame, text="▶ Inyectar Starvios", fg_color="#BE123C", hover_color="#9F1239", command=self.inject_starvios)
+        btn_starvios.pack(side="right", padx=10, pady=10)
+        btn_starvios_ref = ctk.CTkButton(starvios_frame, text="🔄 Recargar Stream", fg_color="#475569", hover_color="#334155", command=self.refresh_starvios)
+        btn_starvios_ref.pack(side="right", padx=10, pady=10)
+        btn_starvios_login = ctk.CTkButton(starvios_frame, text="🔑 Login / Registro Starvios", fg_color="#0284C7", hover_color="#0369A1", command=self.login_starvios)
+        btn_starvios_login.pack(side="left", padx=10, pady=10)
+        
         bottom_frame = ctk.CTkFrame(self.tab_social, fg_color="transparent")
         bottom_frame.pack(fill="x", pady=10)
         
@@ -4275,6 +4296,67 @@ class ProxyFarmApp(ctk.CTk):
         threading.Thread(target=_bot, daemon=True).start()
         self.log_msg("🟩 Inyectando Kick...", "info")
 
+
+    def inject_starvios(self):
+        urls = [line.strip() for line in self.starvios_textbox.get("1.0", "end").splitlines() if line.strip()]
+        if not urls:
+            self.log_msg("⚠️ Ingresa al menos una URL de Starvios", "warning")
+            return
+        
+        self.stop_social_threads = False
+        
+        def _bot():
+            for dev in self.engine.active_devices:
+                if getattr(self, "stop_social_threads", False): break
+                import random
+                url = random.choice(urls)
+                s = dev['serial']
+                self.log_msg(f"Abriendo Starvios en {s}...", "info")
+                
+                # Despertar pantalla
+                self.adb.run_command(["shell", "input", "keyevent", "224"], s)
+                self.adb.run_command(["shell", "input", "keyevent", "82"], s)
+                
+                # Lanzar transmicion de Starvios en Chrome
+                safe_url = f"'{url.strip()}'"
+                self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", safe_url, "-n", "com.android.chrome/com.google.android.apps.chrome.Main"], s)
+                time.sleep(6)
+                
+                if self.starvios_auto.get():
+                    def _keepalive(serial):
+                        for _ in range(60):
+                            for _ in range(60):
+                                if getattr(self, 'stop_social_threads', False): return
+                                time.sleep(1)
+                            # Toque suave neutro en la barra superior para mantener pantalla encendida
+                            self.adb.run_command(["shell", "input", "tap", "240", "100"], serial)
+                    threading.Thread(target=_keepalive, args=(s,), daemon=True).start()
+                    self.log_msg(f"🛡️ Starvios Keep-Alive activo en {s}", "info")
+                time.sleep(2)
+        threading.Thread(target=_bot, daemon=True).start()
+        self.log_msg("🌟 Inyectando Starvios en celulares...", "info")
+
+    def refresh_starvios(self):
+        urls = [line.strip() for line in self.starvios_textbox.get("1.0", "end").splitlines() if line.strip()]
+        if not urls: return
+        import random
+        for dev in self.engine.active_devices:
+            s = dev['serial']
+            url = random.choice(urls)
+            safe_url = f"'{url.strip()}'"
+            self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", safe_url, "-n", "com.android.chrome/com.google.android.apps.chrome.Main"], s)
+        self.log_msg("🔄 Streams de Starvios recargados.", "info")
+
+    def login_starvios(self):
+        urls = [line.strip() for line in self.starvios_textbox.get("1.0", "end").splitlines() if line.strip()]
+        url = urls[0] if urls else "https://starvios.com/live/aleeextorreees"
+        if not self.engine.active_devices:
+            self.log_msg("⚠️ No hay dispositivos USB conectados para Login de Starvios", "warning")
+            return
+        
+        self.log_msg(f"🔑 Ejecutando Login / Registro Starvios en {len(self.engine.active_devices)} celular(es)...", "info")
+        import threading
+        threading.Thread(target=self.injector.login_starvios_batch, args=(self.engine.active_devices, url, 60), daemon=True).start()
 
     def build_accounts_tab(self):
         self.tab_accounts.grid_columnconfigure(0, weight=1)

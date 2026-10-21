@@ -482,6 +482,35 @@ class OmniUSBCleanApp(ctk.CTk):
         ctk.CTkLabel(twitch_opt_f, text="💬 Comentarios Personalizados (uno por línea - opcional):", text_color="#E9D5FF").pack(anchor="w", pady=(2,0))
         self.txt_twitch_comments = ctk.CTkTextbox(twitch_opt_f, height=80)
         self.txt_twitch_comments.pack(fill="x", padx=5, pady=2)
+
+        # Opciones de Starvios
+        starvios_opt_f = ctk.CTkFrame(self.f_auto, fg_color="transparent")
+        starvios_opt_f.pack(fill="x", padx=10, pady=5)
+        ctk.CTkLabel(starvios_opt_f, text="🌟 Opciones de Starvios Live:", font=("Arial", 11, "bold"), text_color="#F43F5E").pack(anchor="w")
+
+        self.chk_starvios_text_var = ctk.BooleanVar(value=True)
+
+        row_st = ctk.CTkFrame(starvios_opt_f, fg_color="transparent")
+        row_st.pack(fill="x")
+        self.chk_starvios_text = ctk.CTkCheckBox(row_st, text="Comentar en Chat (Texto)", variable=self.chk_starvios_text_var, width=10)
+        self.chk_starvios_text.pack(side="left", padx=5)
+
+        row_st_int = ctk.CTkFrame(starvios_opt_f, fg_color="transparent")
+        row_st_int.pack(fill="x", pady=(5,0))
+        ctk.CTkLabel(row_st_int, text="Frecuencia de chat (min):").pack(side="left")
+        self.starvios_interval = ctk.CTkEntry(row_st_int, width=40)
+        self.starvios_interval.pack(side="left", padx=5)
+        self.starvios_interval.insert(0, "5") # Default 5 mins
+
+        row_st_mode = ctk.CTkFrame(starvios_opt_f, fg_color="transparent")
+        row_st_mode.pack(fill="x", pady=(3, 0))
+        ctk.CTkLabel(row_st_mode, text="💬 Banco de Chat:").pack(side="left")
+        self.starvios_comment_mode = ctk.StringVar(value="🎮 Gaming / Apoyo (Default)")
+        ctk.CTkComboBox(row_st_mode, values=["🎮 Gaming / Apoyo (Default)", "📊 Votación 6 Segmentos", "🌐 Mixto (Todos los 2000)"], variable=self.starvios_comment_mode, width=220).pack(side="left", padx=5)
+
+        ctk.CTkLabel(starvios_opt_f, text="💬 Comentarios Personalizados (uno por línea - opcional):", text_color="#FDA4AF").pack(anchor="w", pady=(2,0))
+        self.txt_starvios_comments = ctk.CTkTextbox(starvios_opt_f, height=65)
+        self.txt_starvios_comments.pack(fill="x", padx=5, pady=2)
         
         row_s3 = ctk.CTkFrame(shorts_opt_f, fg_color="transparent")
         auto_ctrl = ctk.CTkFrame(self.f_auto, fg_color="transparent")
@@ -604,6 +633,10 @@ class OmniUSBCleanApp(ctk.CTk):
             if "kick_urls" in d: self.txt_kick.delete("1.0", "end"); self.txt_kick.insert("1.0", d["kick_urls"])
             if "kick_comment_mode" in d and hasattr(self, "kick_comment_mode"): self.kick_comment_mode.set(d["kick_comment_mode"])
             if "twitch_comment_mode" in d and hasattr(self, "twitch_comment_mode"): self.twitch_comment_mode.set(d["twitch_comment_mode"])
+            if "starvios_text" in d: self.chk_starvios_text_var.set(d["starvios_text"])
+            if "starvios_interval" in d: self.starvios_interval.delete(0, "end"); self.starvios_interval.insert(0, str(d["starvios_interval"]))
+            if "starvios_comment_mode" in d: self.starvios_comment_mode.set(d["starvios_comment_mode"])
+            if "starvios_comments" in d: self.txt_starvios_comments.delete("1.0", "end"); self.txt_starvios_comments.insert("1.0", d["starvios_comments"])
             if "yts_m" in d: self.yts_m.delete(0, "end"); self.yts_m.insert(0, str(d["yts_m"]))
             if "mix_m" in d: self.mix_m.delete(0, "end"); self.mix_m.insert(0, str(d["mix_m"]))
             if "singles_m" in d: self.singles_m.delete(0, "end"); self.singles_m.insert(0, str(d["singles_m"]))
@@ -646,6 +679,10 @@ class OmniUSBCleanApp(ctk.CTk):
                 "twitch_urls": self.txt_twitch.get("1.0", "end").strip(),
                 "starvios_urls": self.txt_starvios.get("1.0", "end").strip(),
                 "starvios_m": self.starvios_m.get(),
+                "starvios_text": self.chk_starvios_text_var.get(),
+                "starvios_interval": self.starvios_interval.get(),
+                "starvios_comment_mode": self.starvios_comment_mode.get(),
+                "starvios_comments": self.txt_starvios_comments.get("1.0", "end").strip(),
                 "twitch_text": self.chk_twitch_text_var.get(),
                 "twitch_emoji": self.chk_twitch_emoji_var.get(),
                 "twitch_interval": self.twitch_interval.get(),
@@ -1162,6 +1199,19 @@ class OmniUSBCleanApp(ctk.CTk):
                 tw_comments = [c.strip() for c in raw_comments if c.strip()]
                 tw_mode = getattr(self, "twitch_comment_mode", None) and self.twitch_comment_mode.get() or "gaming"
                 self.injector.inject_twitch_batch(devices, urls_finales, do_text=do_txt, do_emojis=do_emo, chat_interval=tw_interval, custom_comments=tw_comments, drip_mode=drip, comment_mode=tw_mode)
+            elif mode == "starvios":
+                do_txt = self.chk_starvios_text_var.get()
+                try:
+                    st_interval = float(self.starvios_interval.get())
+                except:
+                    st_interval = 5.0
+                raw_comments = self.txt_starvios_comments.get("1.0", "end").strip().split('\n')
+                st_comments = [c.strip() for c in raw_comments if c.strip()]
+                st_mode = getattr(self, "starvios_comment_mode", None) and self.starvios_comment_mode.get() or "gaming"
+                if "Gaming" in st_mode: st_mode_key = "gaming"
+                elif "Votaci" in st_mode: st_mode_key = "votacion"
+                else: st_mode_key = "mixto"
+                self.injector.inject_starvios_batch(devices, urls_finales, do_chat=do_txt, chat_interval=st_interval, custom_comments=st_comments, comment_mode=st_mode_key, drip_mode=drip)
                 
         btn_f = ctk.CTkFrame(popup, fg_color="transparent")
         btn_f.pack(fill="x", pady=10)
@@ -1269,7 +1319,19 @@ class OmniUSBCleanApp(ctk.CTk):
             
         def fn_starvios():
             urls = parse_urls(self.txt_starvios)
-            if urls: self.injector.inject_starvios_batch(self.tunnel.active_devices, urls, drip_mode=drip)
+            if urls:
+                do_txt = self.chk_starvios_text_var.get()
+                try:
+                    st_interval = float(self.starvios_interval.get())
+                except:
+                    st_interval = 5.0
+                raw_comments = self.txt_starvios_comments.get("1.0", "end").strip().split('\n')
+                st_comments = [c.strip() for c in raw_comments if c.strip()]
+                st_mode = getattr(self, "starvios_comment_mode", None) and self.starvios_comment_mode.get() or "gaming"
+                if "Gaming" in st_mode: st_mode_key = "gaming"
+                elif "Votaci" in st_mode: st_mode_key = "votacion"
+                else: st_mode_key = "mixto"
+                self.injector.inject_starvios_batch(self.tunnel.active_devices, urls, do_chat=do_txt, chat_interval=st_interval, custom_comments=st_comments, comment_mode=st_mode_key, drip_mode=drip)
 
         def fn_twitch():
             urls = parse_urls(self.txt_twitch)

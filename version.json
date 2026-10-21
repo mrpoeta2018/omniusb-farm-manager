@@ -1,7 +1,7 @@
 {
-    "version": "6.1.4",
-    "release_date": "2026-10-20",
+    "version": "6.1.5",
+    "release_date": "2026-10-21",
     "check_url": "https://raw.githubusercontent.com/mrpoeta2018/omniusb-farm-manager/edicion-oro/version.json",
-    "notes": "Edicion Oro 6.1.4: Motor inteligente de Login y Registro automatico para Starvios con Google OAuth (seleccion automatica de Gmail, aprobacion de permisos, bypass de fecha de nacimiento 18+ e inyeccion directa del stream con chat activo).",
+    "notes": "Edicion Oro 6.1.5: Motor de Chat Inteligente para Starvios (Live Web Streams) con banco de frases gaming/apoyo y personalizadas, intervalo humano configurable (default 5m con micro-variacion natural), autocierre de teclado y recoleccion pasiva de diamantes.",
     "download_url": "https://github.com/mrpoeta2018/omniusb-farm-manager/archive/refs/heads/edicion-oro.zip"
 }

@@ -4302,39 +4302,12 @@ class ProxyFarmApp(ctk.CTk):
         if not urls:
             self.log_msg("⚠️ Ingresa al menos una URL de Starvios", "warning")
             return
-        
+        if not self.engine.active_devices:
+            self.log_msg("⚠️ No hay dispositivos conectados.", "warning")
+            return
         self.stop_social_threads = False
-        
-        def _bot():
-            for dev in self.engine.active_devices:
-                if getattr(self, "stop_social_threads", False): break
-                import random
-                url = random.choice(urls)
-                s = dev['serial']
-                self.log_msg(f"Abriendo Starvios en {s}...", "info")
-                
-                # Despertar pantalla
-                self.adb.run_command(["shell", "input", "keyevent", "224"], s)
-                self.adb.run_command(["shell", "input", "keyevent", "82"], s)
-                
-                # Lanzar transmicion de Starvios en Chrome
-                safe_url = f"'{url.strip()}'"
-                self.adb.run_command(["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", safe_url, "-n", "com.android.chrome/com.google.android.apps.chrome.Main"], s)
-                time.sleep(6)
-                
-                if self.starvios_auto.get():
-                    def _keepalive(serial):
-                        for _ in range(60):
-                            for _ in range(60):
-                                if getattr(self, 'stop_social_threads', False): return
-                                time.sleep(1)
-                            # Toque suave neutro en la barra superior para mantener pantalla encendida
-                            self.adb.run_command(["shell", "input", "tap", "240", "100"], serial)
-                    threading.Thread(target=_keepalive, args=(s,), daemon=True).start()
-                    self.log_msg(f"🛡️ Starvios Keep-Alive activo en {s}", "info")
-                time.sleep(2)
-        threading.Thread(target=_bot, daemon=True).start()
-        self.log_msg("🌟 Inyectando Starvios en celulares...", "info")
+        self.injector.inject_starvios_batch(self.engine.active_devices, urls, do_chat=True, chat_interval=5.0, drip_mode="rápido", keepalive_mins=60)
+        self.log_msg("🌟 Inyectando Starvios con Chat Activo...", "info")
 
     def refresh_starvios(self):
         urls = [line.strip() for line in self.starvios_textbox.get("1.0", "end").splitlines() if line.strip()]

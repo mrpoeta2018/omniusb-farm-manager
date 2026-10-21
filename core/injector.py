@@ -1200,12 +1200,12 @@ class MediaInjector:
     # INYECCIÓN STARVIOS (LIVE STREAMS WEB)
     # ─────────────────────────────────────────
 
-    def inject_starvios(self, serial, url, drip_delay=0, keepalive_mins=60):
+    def inject_starvios(self, serial, url, do_chat=True, chat_interval=5.0, custom_comments=None, comment_mode="gaming", drip_delay=0, keepalive_mins=60):
         if drip_delay > 0:
             time.sleep(drip_delay)
 
         token = self._new_token(serial)
-        self.log(f"[{serial[-4:]}] 🌟 Iniciando Starvios → {url[:50]}...", "info")
+        self.log(f"[{serial[-4:]}] 📺 Iniciando Starvios -> {url[:50]}...", "info")
 
         # Asegurar pantalla encendida
         self.adb.run_command(["shell", "input", "keyevent", "224"], serial)
@@ -1226,19 +1226,89 @@ class MediaInjector:
 
         if self._is_cancelled(serial, token): return
 
-        # Ciclo de retención / Keep-Alive (evita que la pantalla se apague)
-        wait_seconds = int(keepalive_mins * 60)
-        self.log(f"[{serial[-4:]}] 🛡️ Starvios en vivo: retención activa ({keepalive_mins} mins)", "info")
-        for i in range(wait_seconds):
-            if self._is_cancelled(serial, token): return
-            time.sleep(1)
-            # Toque cada 60s en zona neutra superior (barra) para mantener despierto
-            if i > 0 and i % 60 == 0:
-                self.adb.run_command(["shell", "input", "tap", "240", "100"], serial)
+        # Calcular coordenadas dinámicas de pantalla para chat
+        w, h = 480, 854
+        try:
+            wm_out = self.adb.run_command(["shell", "wm", "size"], serial)
+            m = re.search(r"(\d+)x(\d+)", wm_out or "")
+            if m:
+                w, h = int(m.group(1)), int(m.group(2))
+        except:
+            pass
 
-    def inject_starvios_batch(self, devices, urls, drip_mode="rápido", keepalive_mins=60):
+        chat_x = int(w * 0.42)
+        chat_y = int(h * 0.938)
+
+        from core.comments_bank import get_comment_pool
+        import random
+
+        def send_starvios_comment():
+            if self._is_cancelled(serial, token): return
+
+            # 1. Tap dinámico en la caja de chat
+            t_x = chat_x + random.randint(-6, 6)
+            t_y = chat_y + random.randint(-3, 3)
+            self.adb.run_command(["shell", "input", "tap", str(t_x), str(t_y)], serial)
+            time.sleep(1.2)
+
+            if self._is_cancelled(serial, token): return
+
+            # 2. Elegir comentario
+            msg = ""
+            if custom_comments:
+                msg = random.choice(custom_comments)
+            else:
+                pool = get_comment_pool(comment_mode)
+                msg = random.choice(pool)
+
+            if msg.strip():
+                safe_msg = self._clean_text_for_adb(msg)
+                if safe_msg:
+                    self.log(f"[{serial[-4:]}] 💬 Starvios comentando: {msg[:35]}...", "info")
+                    self.adb.run_command(["shell", "input", "text", safe_msg], serial)
+                    time.sleep(1.0)
+                    # Enviar con Enter virtual
+                    self.adb.run_command(["shell", "input", "keyevent", "66"], serial)
+                    time.sleep(0.8)
+                    # Cerrar teclado suavemente con Back para ver el video completo
+                    self.adb.run_command(["shell", "input", "keyevent", "4"], serial)
+
+        # Primer comentario tras 10 segundos
+        if do_chat:
+            time.sleep(10)
+            send_starvios_comment()
+
+        # Ciclo de retención / Keep-Alive y Comentarios periódicos
+        wait_seconds = int(keepalive_mins * 60)
+        chat_info = f" | Chat cada {chat_interval} min" if do_chat else ""
+        self.log(f"[{serial[-4:]}] ⏳ Starvios en vivo: retención activa ({keepalive_mins} mins){chat_info}", "info")
+
+        try:
+            interval_sec = max(30, int(float(chat_interval) * 60))
+        except:
+            interval_sec = 300
+
+        elapsed = 0
+        last_comment_time = 0
+
+        while elapsed < wait_seconds and not self._is_cancelled(serial, token):
+            time.sleep(1)
+            elapsed += 1
+
+            # Toque de Keep-Alive cada 60s en la barra superior neutra
+            if elapsed % 60 == 0:
+                self.adb.run_command(["shell", "input", "tap", str(int(w * 0.5)), str(int(h * 0.12))], serial)
+
+            # Enviar comentario periódico según intervalo
+            if do_chat and (elapsed - last_comment_time) >= interval_sec:
+                send_starvios_comment()
+                last_comment_time = elapsed
+                interval_sec = max(30, int(float(chat_interval) * 60) + random.randint(-15, 20))
+
+    def inject_starvios_batch(self, devices, urls, do_chat=True, chat_interval=5.0, custom_comments=None, comment_mode="gaming", drip_mode="rápido", keepalive_mins=60):
         if not devices or not urls: return
-        self.log(f"🌟 Inyectando Starvios en {len(devices)} dispositivo(s)...", "info")
+        chat_status = f"con chat cada {chat_interval}m" if do_chat else "solo viewers"
+        self.log(f"🌟 Inyectando Starvios en {len(devices)} dispositivo(s) ({chat_status})...", "info")
         for i, dev in enumerate(devices):
             import random
             url = random.choice(urls)
@@ -1247,11 +1317,7 @@ class MediaInjector:
             elif drip_mode == "lento" and i > 0: delay = i * random.randint(15, 30)
             elif i > 0: delay = i * 1.5
             import threading
-            threading.Thread(target=self.inject_starvios, args=(dev["serial"], url, delay, keepalive_mins), daemon=True).start()
-
-
-
-
+            threading.Thread(target=self.inject_starvios, args=(dev["serial"], url, do_chat, chat_interval, custom_comments, comment_mode, delay, keepalive_mins), daemon=True).start()
 
     def login_and_inject_starvios(self, serial, url=None, keepalive_mins=60):
         token = self._new_token(serial)

@@ -258,6 +258,12 @@ class OmniUSBCleanApp(ctk.CTk):
         ctk.CTkLabel(tw_f, text="🟣 Twitch", font=("Arial", 11, "bold"), text_color="white").pack()
         self.txt_twitch = ctk.CTkTextbox(tw_f, height=50)
         self.txt_twitch.pack(fill="x", padx=4, pady=4)
+
+        stv_f = ctk.CTkFrame(cajas_frame, fg_color="#831843", corner_radius=5)
+        stv_f.pack(side="top", fill="x", expand=True, pady=3)
+        ctk.CTkLabel(stv_f, text="🌟 Starvios Live Streams", font=("Arial", 11, "bold"), text_color="white").pack()
+        self.txt_starvios = ctk.CTkTextbox(stv_f, height=50)
+        self.txt_starvios.pack(fill="x", padx=4, pady=4)
         
         yts_f = ctk.CTkFrame(cajas_frame, fg_color="#EA580C", corner_radius=5)
         yts_f.pack(side="top", fill="x", expand=True, pady=3)
@@ -318,6 +324,11 @@ class OmniUSBCleanApp(ctk.CTk):
         
         btn9 = ctk.CTkButton(list_btn_f, text="🟣 Twitch", fg_color="#9146FF", command=lambda: self.action_manual_inject("twitch"))
         btn9.pack(side="top", fill="x", pady=3)
+
+        btn10 = ctk.CTkButton(list_btn_f, text="🌟 Starvios Live", fg_color="#BE123C", hover_color="#9F1239", command=lambda: self.action_manual_inject("starvios"))
+        btn10.pack(side="top", fill="x", pady=3)
+        btn_starvios_login = ctk.CTkButton(list_btn_f, text="🔑 Login Starvios", fg_color="#0284C7", hover_color="#0369A1", command=self.action_starvios_login)
+        btn_starvios_login.pack(side="top", fill="x", pady=3)
         
         btn_clone = ctk.CTkButton(list_btn_f, text="🧬 Clonar SP", fg_color="#047857", command=self.action_manual_clone)
         btn_clone.pack(side="top", fill="x", pady=3)
@@ -370,6 +381,7 @@ class OmniUSBCleanApp(ctk.CTk):
         self.awa_m = _make_timer_row(timers_f, "🌸 AWA")
         self.kick_m = _make_timer_row(timers_f, "🟩 Kick")
         self.twitch_m = _make_timer_row(timers_f, "🟣 Twitch")
+        self.starvios_m = _make_timer_row(timers_f, "🌟 Starvios")
         self.yts_m = _make_timer_row(timers_f, "📱 YT Shorts")
         self.mix_m = _make_timer_row(timers_f, "🌪️ MODO MIX")
         self.singles_m = _make_timer_row(timers_f, "⏱️ Canción Suelta")
@@ -632,6 +644,8 @@ class OmniUSBCleanApp(ctk.CTk):
                 "kick_urls": self.txt_kick.get("1.0", "end").strip(),
                 "twitch_m": self.twitch_m.get(),
                 "twitch_urls": self.txt_twitch.get("1.0", "end").strip(),
+                "starvios_urls": self.txt_starvios.get("1.0", "end").strip(),
+                "starvios_m": self.starvios_m.get(),
                 "twitch_text": self.chk_twitch_text_var.get(),
                 "twitch_emoji": self.chk_twitch_emoji_var.get(),
                 "twitch_interval": self.twitch_interval.get(),
@@ -1053,6 +1067,7 @@ class OmniUSBCleanApp(ctk.CTk):
         elif mode == "ytshorts": t = self.txt_yts
         elif mode == "kick": t = self.txt_kick
         elif mode == "twitch": t = self.txt_twitch
+        elif mode == "starvios": t = self.txt_starvios
         
         raw_urls = t.get("1.0", "end").strip().split('\n')
         urls_validas = []
@@ -1195,6 +1210,7 @@ class OmniUSBCleanApp(ctk.CTk):
             awa_s = int(float(self.awa_m.get()) * 60)
             kick_s = int(float(self.kick_m.get()) * 60)
             twitch_s = int(float(self.twitch_m.get()) * 60)
+            starvios_s = int(float(self.starvios_m.get()) * 60)
             yts_s = int(float(self.yts_m.get()) * 60)
             mix_s = int(float(self.mix_m.get()) * 60)
             singles_s = int(float(self.singles_m.get()) * 60)
@@ -1251,6 +1267,10 @@ class OmniUSBCleanApp(ctk.CTk):
             urls = parse_urls(self.txt_awa)
             if urls: self.injector.inject_awa_batch(self.tunnel.active_devices, urls, drip_mode=drip)
             
+        def fn_starvios():
+            urls = parse_urls(self.txt_starvios)
+            if urls: self.injector.inject_starvios_batch(self.tunnel.active_devices, urls, drip_mode=drip)
+
         def fn_twitch():
             urls = parse_urls(self.txt_twitch)
             do_txt = self.chk_twitch_text_var.get()
@@ -1323,6 +1343,7 @@ class OmniUSBCleanApp(ctk.CTk):
         if awa_s > 0 and parse_urls(self.txt_awa): phases.append(("AWA", awa_s, fn_awa))
         if kick_s > 0 and parse_urls(self.txt_kick): phases.append(("Kick", kick_s, fn_kick))
         if twitch_s > 0 and parse_urls(self.txt_twitch): phases.append(("Twitch", twitch_s, fn_twitch))
+        if starvios_s > 0 and parse_urls(self.txt_starvios): phases.append(("Starvios", starvios_s, fn_starvios))
         if yts_s > 0 and parse_urls(self.txt_yts): phases.append(("YT Shorts", yts_s, fn_yts))
         if mix_s > 0 and (parse_urls(self.txt_yt) or parse_urls(self.txt_ym) or parse_urls(self.txt_yts)): phases.append(("Modo MIX", mix_s, fn_mix))
 
@@ -1735,3 +1756,13 @@ class OmniUSBCleanApp(ctk.CTk):
 if __name__ == "__main__":
     app = OmniUSBCleanApp()
     app.mainloop()
+
+    def action_starvios_login(self):
+        if not self.tunnel.active_devices:
+            self.log_msg("⚠️ Conecta o abre el túnel en dispositivos antes del login.", "warn")
+            return
+        urls = [line.strip() for line in self.txt_starvios.get("1.0", "end").splitlines() if line.strip()]
+        url = urls[0] if urls else "https://starvios.com/live/aleeextorreees"
+        self.log_msg(f"🔑 Iniciando Login/Registro Starvios en {len(self.tunnel.active_devices)} dispositivo(s)...", "info")
+        import threading
+        threading.Thread(target=self.injector.login_starvios_batch, args=(self.tunnel.active_devices, url, 60), daemon=True).start()
